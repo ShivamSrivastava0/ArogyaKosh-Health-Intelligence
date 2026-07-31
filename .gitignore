@@ -1,0 +1,53 @@
+# ===========================
+# ArogyaKosh — .gitignore
+# ===========================
+
+# ----- Dependencies -----
+node_modules/
+__pycache__/
+*.pyc
+.pyo
+venv/
+
+# ----- Environment -----
+.env
+.env.local
+.env.*.local
+
+# ----- Build Output -----
+dist/
+build/
+*.egg-info/
+
+# ----- IDE -----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ----- OS -----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ----- Logs -----
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ----- Uploads -----
+server/uploads/*
+!server/uploads/.gitkeep
+
+# ----- ML Models -----
+ml-service/models/*.joblib
+ml-service/models/*.pkl
+
+# ----- Jupyter -----
+.ipynb_checkpoints/
+
+# ----- Coverage -----
+coverage/
+.nyc_output/
