@@ -7,13 +7,17 @@ import {
   HiChevronDown,
   HiOutlineUser,
   HiOutlineArrowLeftOnRectangle,
+  HiOutlineMoon,
+  HiOutlineSun,
 } from 'react-icons/hi2';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import Avatar from '../ui/Avatar';
 import { APP_NAME } from '../../constants';
 
 export default function Navbar({ onMenuClick }) {
   const { user, logout } = useAuth();
+  const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -35,7 +39,7 @@ export default function Navbar({ onMenuClick }) {
   };
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 z-30">
+    <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-6 z-30 transition-colors">
       <div className="flex items-center gap-4 lg:hidden">
         <button
           onClick={onMenuClick}
@@ -66,10 +70,18 @@ export default function Navbar({ onMenuClick }) {
       </div>
 
       <div className="flex items-center gap-3 sm:gap-5 ml-auto lg:ml-0">
-        <button className="relative p-2 text-slate-400 hover:text-slate-500 hover:bg-slate-100 rounded-full transition-colors">
+        <button
+          onClick={toggleTheme}
+          className="relative p-2 text-slate-400 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+        >
+          <span className="sr-only">Toggle dark mode</span>
+          {isDarkMode ? <HiOutlineSun className="h-6 w-6 text-emerald-400" /> : <HiOutlineMoon className="h-6 w-6 text-slate-500" />}
+        </button>
+
+        <button className="relative p-2 text-slate-400 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
           <span className="sr-only">View notifications</span>
           <HiOutlineBell className="h-6 w-6" />
-          <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />
+          <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900" />
         </button>
 
         <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>

@@ -16,6 +16,12 @@ import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import VerifyEmail from './pages/auth/VerifyEmail';
 import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
+import FamilyVault from './pages/FamilyVault';
+import Intelligence from './pages/Intelligence';
+import Predict from './pages/Predict';
+import PreDoctorBrief from './pages/PreDoctorBrief';
+import EmergencyCard from './pages/EmergencyCard';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -38,12 +44,12 @@ function App() {
           <Route element={<DashboardLayout />}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/profile" element={<div className="p-8"><h1 className="text-2xl font-bold">Personal Health Profile</h1><p className="text-slate-500 mt-2">Coming in Phase 3</p></div>} />
-            <Route path="/family" element={<div className="p-8"><h1 className="text-2xl font-bold">Family Health Vault</h1><p className="text-slate-500 mt-2">Coming in Phase 4</p></div>} />
-            <Route path="/intelligence" element={<div className="p-8"><h1 className="text-2xl font-bold">Health Intelligence (RAG & Parsing)</h1><p className="text-slate-500 mt-2">Coming in Phase 5</p></div>} />
-            <Route path="/predict" element={<div className="p-8"><h1 className="text-2xl font-bold">ArogyaPredict (ML)</h1><p className="text-slate-500 mt-2">Coming in Phase 6</p></div>} />
-            <Route path="/doctor-brief" element={<div className="p-8"><h1 className="text-2xl font-bold">Pre-Doctor Brief</h1><p className="text-slate-500 mt-2">Coming in Phase 7</p></div>} />
-            <Route path="/emergency-card" element={<div className="p-8"><h1 className="text-2xl font-bold">Emergency Card & QR</h1><p className="text-slate-500 mt-2">Coming in Phase 7</p></div>} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/family" element={<FamilyVault />} />
+            <Route path="/intelligence" element={<Intelligence />} />
+            <Route path="/predict" element={<Predict />} />
+            <Route path="/doctor-brief" element={<PreDoctorBrief />} />
+            <Route path="/emergency-card" element={<EmergencyCard />} />
           </Route>
         </Route>
 

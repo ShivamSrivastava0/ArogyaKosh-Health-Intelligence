@@ -19,15 +19,15 @@ const Input = forwardRef(({
   const isPassword = type === 'password';
   const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
 
-  const baseInputStyles = "block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm transition-colors disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed";
-  const errorStyles = error ? "border-rose-300 text-rose-900 placeholder-rose-300 focus:border-rose-500 focus:ring-rose-500" : "";
+  const baseInputStyles = "block w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm transition-colors disabled:bg-slate-50 disabled:dark:bg-slate-900 disabled:text-slate-500 disabled:cursor-not-allowed";
+  const errorStyles = error ? "border-rose-300 dark:border-rose-500 text-rose-900 dark:text-rose-400 placeholder-rose-300 focus:border-rose-500 focus:ring-rose-500" : "";
   const iconPadding = leftIcon ? "pl-10" : "";
   const rightIconPadding = (rightIcon || isPassword) ? "pr-10" : "";
 
   return (
     <div className="w-full">
       {label && (
-        <label htmlFor={inputId} className="block text-sm font-medium text-slate-700 mb-1">
+        <label htmlFor={inputId} className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
           {label}
         </label>
       )}

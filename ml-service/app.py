@@ -12,12 +12,28 @@ to maintain clear separation of concerns and allow independent scaling.
 """
 
 import os
+import joblib
+import pandas as pd
+import numpy as np
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+
+# Load Models (global to stay in memory)
+MODELS_DIR = os.path.join(os.path.dirname(__file__), 'models')
+
+def load_model(filename):
+    path = os.path.join(MODELS_DIR, filename)
+    if os.path.exists(path):
+        return joblib.load(path)
+    return None
+
+heart_model = load_model('heart_disease_model.joblib')
+diabetes_model = load_model('diabetes_model.joblib')
+hypertension_model = load_model('hypertension_model.joblib')
 
 # ---------------------------------------------------------------------------
 # App Factory
@@ -66,34 +82,76 @@ def create_app():
         }), 200
 
     # -----------------------------------------------------------------------
-    # Prediction Routes (scaffolded — models will be trained in Phase 6)
+    # Prediction Routes
     # -----------------------------------------------------------------------
     @app.route("/predict/heart", methods=["POST"])
     def predict_heart():
-        """
-        Heart disease risk prediction.
-        Model: Random Forest / Logistic Regression (trained on UCI Heart Disease dataset)
-        Will be implemented in Phase 6.
-        """
-        return _prediction_not_ready("Heart Disease")
+        if not heart_model:
+            return _prediction_not_ready("Heart Disease")
+        
+        try:
+            data = request.json
+            features = ['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'thalach', 'exang']
+            input_df = pd.DataFrame([[data.get(f, 0) for f in features]], columns=features)
+            
+            prob = heart_model.predict_proba(input_df)[0][1]
+            
+            return jsonify({
+                "success": True,
+                "message": "Heart disease prediction successful",
+                "data": {
+                    "probability": round(float(prob), 4),
+                    "risk_level": "High" if prob > 0.6 else "Medium" if prob > 0.3 else "Low"
+                }
+            })
+        except Exception as e:
+            return jsonify({"success": False, "message": "Prediction failed", "errors": [str(e)]}), 400
 
     @app.route("/predict/diabetes", methods=["POST"])
     def predict_diabetes():
-        """
-        Diabetes risk prediction.
-        Model: XGBoost with SMOTE (trained on PIMA Indians dataset)
-        Will be implemented in Phase 6.
-        """
-        return _prediction_not_ready("Diabetes")
+        if not diabetes_model:
+            return _prediction_not_ready("Diabetes")
+        
+        try:
+            data = request.json
+            features = ['pregnancies', 'glucose', 'bloodpressure', 'skinthickness', 'insulin', 'bmi', 'pedigree', 'age']
+            input_df = pd.DataFrame([[data.get(f, 0) for f in features]], columns=features)
+            
+            prob = diabetes_model.predict_proba(input_df)[0][1]
+            
+            return jsonify({
+                "success": True,
+                "message": "Diabetes prediction successful",
+                "data": {
+                    "probability": round(float(prob), 4),
+                    "risk_level": "High" if prob > 0.6 else "Medium" if prob > 0.3 else "Low"
+                }
+            })
+        except Exception as e:
+            return jsonify({"success": False, "message": "Prediction failed", "errors": [str(e)]}), 400
 
     @app.route("/predict/hypertension", methods=["POST"])
     def predict_hypertension():
-        """
-        Hypertension risk prediction.
-        Model: Ensemble classifier
-        Will be implemented in Phase 6.
-        """
-        return _prediction_not_ready("Hypertension")
+        if not hypertension_model:
+            return _prediction_not_ready("Hypertension")
+        
+        try:
+            data = request.json
+            features = ['age', 'sex', 'bmi', 'smoking', 'alcohol', 'physical_activity', 'sodium_intake', 'stress_level']
+            input_df = pd.DataFrame([[data.get(f, 0) for f in features]], columns=features)
+            
+            prob = hypertension_model.predict_proba(input_df)[0][1]
+            
+            return jsonify({
+                "success": True,
+                "message": "Hypertension prediction successful",
+                "data": {
+                    "probability": round(float(prob), 4),
+                    "risk_level": "High" if prob > 0.6 else "Medium" if prob > 0.3 else "Low"
+                }
+            })
+        except Exception as e:
+            return jsonify({"success": False, "message": "Prediction failed", "errors": [str(e)]}), 400
 
     # -----------------------------------------------------------------------
     # Error Handlers
