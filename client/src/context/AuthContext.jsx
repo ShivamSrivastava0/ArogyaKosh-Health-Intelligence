@@ -1,116 +1,67 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import {
-  getCurrentUser,
-  loginUser as apiLogin,
-  registerUser as apiRegister,
-  logoutUser as apiLogout,
-} from '../services/authService';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { api, tokens } from '../api/client';
+import { clearCache } from '../hooks/useApi';
 
 const AuthContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [status, setStatus] = useState(tokens.access ? 'loading' : 'guest'); // loading | authed | guest
 
-  useEffect(() => {
-    checkAuth();
+  const loadUser = useCallback(async () => {
+    try {
+      const { user: me } = await api.get('/auth/me');
+      setUser(me);
+      setStatus('authed');
+      return me;
+    } catch {
+      tokens.clear();
+      setUser(null);
+      setStatus('guest');
+      return null;
+    }
   }, []);
 
-  const checkAuth = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+  useEffect(() => {
+    if (tokens.access) loadUser();
+    const onSignedOut = () => {
       setUser(null);
-      setIsAuthenticated(false);
-      setLoading(false);
-      return;
-    }
+      setStatus('guest');
+      clearCache();
+    };
+    window.addEventListener('ak:signed-out', onSignedOut);
+    return () => window.removeEventListener('ak:signed-out', onSignedOut);
+  }, [loadUser]);
 
-    try {
-      setLoading(true);
-      const res = await getCurrentUser();
-      if (res.success && res.data?.user) {
-        setUser(res.data.user);
-        setIsAuthenticated(true);
-      } else {
-        setUser(null);
-        setIsAuthenticated(false);
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-      }
-    } catch (error) {
-      setUser(null);
-      setIsAuthenticated(false);
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const startSession = useCallback((data) => {
+    tokens.set(data.tokens);
+    clearCache();
+    setUser(data.user);
+    setStatus('authed');
+    return data.user;
+  }, []);
 
-  const login = async (credentials) => {
-    const res = await apiLogin(credentials);
-    if (res.success && res.data) {
-      const { user: userData, tokens } = res.data;
-      localStorage.setItem('token', tokens.accessToken);
-      localStorage.setItem('refreshToken', tokens.refreshToken);
-      setUser(userData);
-      setIsAuthenticated(true);
-      return res;
-    }
-    throw new Error(res.message || 'Login failed');
-  };
-
-  const register = async (data) => {
-    const res = await apiRegister(data);
-    if (res.success && res.data) {
-      const { user: userData, tokens } = res.data;
-      localStorage.setItem('token', tokens.accessToken);
-      localStorage.setItem('refreshToken', tokens.refreshToken);
-      setUser(userData);
-      setIsAuthenticated(true);
-      return res;
-    }
-    throw new Error(res.message || 'Registration failed');
-  };
-
-  const logout = async () => {
-    try {
-      const storedRefreshToken = localStorage.getItem('refreshToken');
-      if (storedRefreshToken) {
-        await apiLogout(storedRefreshToken);
-      }
-    } catch (err) {
-      console.error('Logout error:', err);
-    } finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      setUser(null);
-      setIsAuthenticated(false);
-    }
-  };
-
-  const value = {
+  const value = useMemo(() => ({
     user,
-    loading,
-    isAuthenticated,
-    login,
-    register,
-    logout,
-    checkAuth,
-  };
+    status,
+    isAuthed: status === 'authed',
+    login: async (email, password) => startSession(await api.post('/auth/login', { email, password })),
+    register: async (body) => startSession(await api.post('/auth/register', body)),
+    demo: async () => startSession(await api.post('/auth/demo')),
+    google: async (credential) => startSession(await api.post('/auth/google', { credential })),
+    applySession: startSession,
+    updateUser: (u) => setUser(u),
+    reloadUser: loadUser,
+    logout: async () => {
+      try { await api.post('/auth/logout', { refreshToken: tokens.refresh }); } catch { /* ignore */ }
+      tokens.clear();
+      clearCache();
+      setUser(null);
+      setStatus('guest');
+    },
+  }), [user, status, startSession, loadUser]);
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);

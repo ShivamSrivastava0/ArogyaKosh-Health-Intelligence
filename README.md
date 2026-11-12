@@ -1,321 +1,82 @@
-# ArogyaKosh-Health-Intelligence
-## FullStack AI RAG ML - *Transforming Medical Records into Health Intelligence*
-AI-powered Health Intelligence Platform that transforms medical records into actionable insights using React, Node.js, Machine Learning, RAG, and Generative AI.
+# ArogyaKosh
 
-<p align="center">
-  <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react" />
-  <img src="https://img.shields.io/badge/Node.js-Express-339933?style=for-the-badge&logo=node.js" />
-  <img src="https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb" />
-  <img src="https://img.shields.io/badge/Python-ML-3776AB?style=for-the-badge&logo=python" />
-  <img src="https://img.shields.io/badge/LangChain-RAG-blue?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Google-Gemini-orange?style=for-the-badge" />
-</p>
+**Family health, organised.** One place for the medicines, reports, vaccines and
+emergency information of everyone you look after — your parents, your kids and you.
 
-<p align="center">
-An AI-powered Health Intelligence Platform that transforms medical records into meaningful insights using <b>Machine Learning</b>, <b>Retrieval-Augmented Generation (RAG)</b>, and <b>Modern Full-Stack Development</b>.
-</p>
+ArogyaKosh is built for the person who keeps a family's health together: it
+reminds, forecasts, flags and shares, instead of just storing PDFs.
 
----
+## What it does
 
-# ✨ Features
+| | |
+|---|---|
+| **Today** | Every dose for every family member on one screen. One tap to mark taken; stock counts down; refill, expiry, overdue-checkup, abnormal-reading and insurance-renewal alerts. |
+| **Medicines** | Schedules (times, weekdays, meal timing), stock forecasting ("runs out in 4 days"), refills, adherence analytics, and an interaction / allergy / duplicate-ingredient check that understands Indian brand names. |
+| **Vitals & labs** | BP, sugar, HbA1c, lipids, thyroid, Hb, vitamin D and more — charted against normal ranges, with trends and flags. |
+| **Health locker** | Upload prescriptions, reports, scans and bills. Search, preview, download. Optional AI reading turns lab PDFs into charted values after you confirm them. |
+| **Doctor brief** | One-page clinical summary per person, printable, or shared as a link that expires (1 h – 30 d), with view counts and instant revoke. |
+| **Emergency** | Scannable QR medical ID per person (no app needed to read it), printable wallet card, 112/108 one-tap, nearby hospitals/blood banks, readiness checklist and first-aid kit checker. |
+| **Vaccines** | Full IAP childhood schedule generated from date of birth; adult boosters and yearly flu that reschedule themselves. |
+| **Appointments** | Visits, checkups and tests with repeat rules; calendar subscription (Google / Apple / Outlook) including medicine alarms. |
+| **Expenses** | Monthly, category and per-person breakdowns, Section 80D tagging, CSV export, financial-year view. |
+| **Health score** | An explainable 0–100 score per person — every factor shows its points and what to do next. Includes the Indian Diabetes Risk Score check. |
+| **Ask Kosh** | Questions about the family's records ("What was Papa's latest BP?"). Uses Gemini when configured, otherwise answers directly from saved data. Emergency phrases always route to 112/108. |
 
-- 🔐 Secure JWT Authentication
-- 👤 Personal Health Profile
-- 👨‍👩‍👧 Family Health Vault
-- 📁 Digital Health Locker
-- 🧠 AI Lab Report Intelligence
-- 📊 ArogyaScore™ Engine
-- 📈 Health Timeline
-- 🤖 Health RAG Assistant
-- ❤️ ArogyaPredict (Machine Learning)
-- 👨‍⚕️ AI Pre-Doctor Brief
-- 🚑 Emergency QR Medical Card
-- 📄 Annual Health Report
+Plus: one-click sample household, ⌘K command palette, morning email digest,
+full data export and account deletion.
 
----
+## Quick start
 
-# 🏗️ System Architecture
-
-```text
-React (Vite)
-      │
-      ▼
-Express.js REST API
-      │
- ┌────┼──────────────┐
- ▼    ▼              ▼
-MongoDB        Cloudinary
-                    │
-                    ▼
-      Flask ML Service
-                    │
-                    ▼
-LangChain + ChromaDB + Gemini
-```
-
----
-
-# 🛠 Tech Stack
-
-## Frontend
-
-- React.js
-- Vite
-- Tailwind CSS
-- React Router
-- Axios
-- Recharts
-- Framer Motion
-
-## Backend
-
-- Node.js
-- Express.js
-- JWT Authentication
-- Multer
-- Nodemailer
-- pdf-parse
-
-## Database
-
-- MongoDB Atlas
-- Mongoose
-
-## AI / Machine Learning
-
-- Python
-- Flask
-- Scikit-learn
-- XGBoost
-- SHAP
-- LangChain
-- ChromaDB
-- Google Gemini
-- spaCy
-
-## Cloud
-
-- Vercel
-- Render
-- Hugging Face Spaces
-- Cloudinary
-
----
-
-# 📂 Project Structure
-
-```text
-ArogyaKosh-FullStack-AI-RAG-ML/
-
-├── client/
-├── server/
-├── ml-service/
-├── notebooks/
-├── README.md
-└── .env.example
-```
-
----
-
-# 🚀 Core Modules
-
-| Module | Description |
-|---------|-------------|
-| Authentication | Secure JWT-based authentication |
-| Health Profile | Personal medical information |
-| Family Vault | Multi-member health management |
-| Health Locker | Secure cloud document storage |
-| Lab Intelligence | Automatic report parsing & trends |
-| ArogyaScore | AI-powered health scoring |
-| Health RAG | Chat with your medical records |
-| ArogyaPredict | ML risk prediction |
-| Doctor Brief | AI-generated appointment summary |
-| Emergency QR | Instant emergency medical access |
-| Annual Report | AI-powered yearly health report |
-
-````md
-# ⚙️ Installation
-
-## Clone Repository
+Prerequisites: Node 18+, MongoDB (local or Atlas).
 
 ```bash
-git clone https://github.com/your-username/ArogyaKosh-FullStack-AI-RAG-ML.git
-cd ArogyaKosh-FullStack-AI-RAG-ML
+cd server
+cp .env.example .env      # fill in MONGODB_URI and two JWT secrets
+npm install
+npm run dev               # http://localhost:5000/api
 ```
-
-## Install Dependencies
-
-### Frontend
 
 ```bash
 cd client
+cp .env.example .env
 npm install
+npm run dev               # http://localhost:5173
 ```
 
-### Backend
+No database handy? `npm run dev:memory` in `server/` starts with a throwaway
+in-memory MongoDB. Click **Explore a sample family** on the landing page to get
+a fully populated household.
 
-```bash
-cd ../server
-npm install
-```
+Optional integrations (all degrade gracefully when unset): `GEMINI_API_KEY`
+(AI), `SMTP_*` (email), `GOOGLE_CLIENT_ID` + `VITE_GOOGLE_CLIENT_ID` (Google sign-in).
 
-### ML Service
+## Scripts
 
-```bash
-cd ../ml-service
-pip install -r requirements.txt
-```
+| Where | Command | |
+|---|---|---|
+| server | `npm run dev` / `npm start` | API with nodemon / production |
+| server | `npm run dev:memory` | API on an in-memory database |
+| server | `npm run smoke` | End-to-end API checks on an in-memory database |
+| client | `npm run dev` / `npm run build` | Vite dev server / production build |
 
----
-
-# 🔑 Environment Variables
-
-```env
-# Backend
-MONGODB_URI=
-JWT_SECRET=
-JWT_REFRESH_SECRET=
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
-GEMINI_API_KEY=
-EMAIL_USER=
-EMAIL_PASS=
-
-# Frontend
-VITE_API_URL=
-
-# ML Service
-MODEL_PATH=
-```
-
----
-
-# ▶️ Run Locally
-
-### Frontend
-
-```bash
-npm run dev
-```
-
-### Backend
-
-```bash
-npm run dev
-```
-
-### ML Service
-
-```bash
-python app.py
-```
-
----
-
-# 🧠 Machine Learning
-
-The project includes four end-to-end Jupyter notebooks:
-
-- ❤️ Heart Disease Prediction
-- 🩸 Diabetes Prediction
-- 📈 Lab Trend Analysis
-- 🔬 Lab Report NLP Extraction
-
-Each notebook covers:
-
-- Exploratory Data Analysis (EDA)
-- Data Cleaning
-- Feature Engineering
-- Model Training
-- Evaluation Metrics
-- SHAP Explainability
-- Model Export
-
----
-
-# 🤖 AI Features
-
-### 🧠 Health RAG Assistant
+## Project layout
 
 ```
-Medical Reports
-        │
-        ▼
-Document Parsing
-        │
-        ▼
-LangChain
-        │
-        ▼
-ChromaDB
-        │
-        ▼
-Gemini
-        │
-        ▼
-AI Answers with Citations
+client/   React + Vite + Tailwind web app
+server/   Express + Mongoose API (routes → controllers → services → models)
+docs/     ARCHITECTURE.md — data model, layering, flows, security
 ```
 
-### ❤️ ArogyaPredict
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the low-level design.
 
-- Heart Disease Risk
-- Diabetes Risk
-- Hypertension Risk
-- Explainable AI using SHAP
+## Deploying
 
----
+- Serve `client/dist` from any static host; set `VITE_API_URL` at build time.
+- Run the API with `NODE_ENV=production`, a persistent `UPLOAD_DIR` volume, strong JWT secrets, `CLIENT_URL` set to your web origin and `PUBLIC_API_URL` to the public API URL.
+- Put both behind HTTPS.
 
-# ☁️ Deployment
+## Disclaimer
 
-| Service | Platform |
-|----------|----------|
-| Frontend | Vercel |
-| Backend | Render |
-| ML API | Hugging Face Spaces |
-| Database | MongoDB Atlas |
-| Storage | Cloudinary |
-
----
-
-# 📸 Screenshots
-
-> *(Add project screenshots here after development)*
-
-- Dashboard
-- Health Intelligence
-- Lab Report Intelligence
-- Health RAG Assistant
-- ArogyaPredict
-- Emergency QR Card
-- Pre-Doctor Brief
-
----
-
-# 🚀 Future Enhancements
-
-- 📱 Mobile Application
-- ⌚ Wearable Integration
-- 🌍 Multi-language Support
-- 🗣 Voice Assistant
-- 🏥 Hospital Integration
-- 👨‍⚕️ Doctor Portal
-
----
-
-# ⚠️ Disclaimer
-
-- ArogyaPredict provides statistical health risk estimates and **does not replace professional medical advice.**
-- The Health RAG Assistant answers **only from the user's uploaded medical documents.**
-- ArogyaKosh is designed as a **personal health management platform**, not a medical diagnosis system.
-
----
-
-# 👨‍💻 Author
-
-**Shivam Srivastava**
-
-If you found this project helpful, consider ⭐ starring the repository!
-
----
-````
+ArogyaKosh organises health information. It does not diagnose or replace a
+doctor. Interaction checks and score tips are prompts to talk to a professional.
+In an emergency in India, call **112**.

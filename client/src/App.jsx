@@ -1,63 +1,96 @@
-import React from 'react';
-import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
+import { lazy, Suspense } from 'react';
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
+import { FamilyProvider } from './context/FamilyContext';
+import { QuickAddProvider } from './context/QuickAddContext';
+import AppShell from './components/layout/AppShell';
+import { PageSkeleton } from './components/ui/Display';
+import { Spinner } from './components/ui/Button';
 
-// Layouts
-import DashboardLayout from './layouts/DashboardLayout';
-import AuthLayout from './layouts/AuthLayout';
+const Landing = lazy(() => import('./pages/Landing'));
+const Login = lazy(() => import('./pages/auth/Login'));
+const Register = lazy(() => import('./pages/auth/Register'));
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
+const VerifyEmail = lazy(() => import('./pages/auth/VerifyEmail'));
+const Today = lazy(() => import('./pages/app/Today'));
+const Family = lazy(() => import('./pages/app/Family'));
+const MemberDetail = lazy(() => import('./pages/app/MemberDetail'));
+const Brief = lazy(() => import('./pages/app/Brief'));
+const Medicines = lazy(() => import('./pages/app/Medicines'));
+const Vitals = lazy(() => import('./pages/app/Vitals'));
+const Records = lazy(() => import('./pages/app/Records'));
+const Appointments = lazy(() => import('./pages/app/Appointments'));
+const Vaccines = lazy(() => import('./pages/app/Vaccines'));
+const Expenses = lazy(() => import('./pages/app/Expenses'));
+const Emergency = lazy(() => import('./pages/app/Emergency'));
+const Assistant = lazy(() => import('./pages/app/Assistant'));
+const Settings = lazy(() => import('./pages/app/Settings'));
+const PublicEmergency = lazy(() => import('./pages/public/PublicEmergency'));
+const PublicShare = lazy(() => import('./pages/public/PublicShare'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
-// Guard
-import ProtectedRoute from './components/common/ProtectedRoute';
+const FullScreenLoader = () => (
+  <div className="grid min-h-dvh place-items-center"><Spinner className="h-6 w-6 text-ink-3" /></div>
+);
 
-// Pages
-import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
-import ForgotPassword from './pages/auth/ForgotPassword';
-import ResetPassword from './pages/auth/ResetPassword';
-import VerifyEmail from './pages/auth/VerifyEmail';
-import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
-import FamilyVault from './pages/FamilyVault';
-import Intelligence from './pages/Intelligence';
-import Predict from './pages/Predict';
-import PreDoctorBrief from './pages/PreDoctorBrief';
-import EmergencyCard from './pages/EmergencyCard';
-import NotFound from './pages/NotFound';
-
-function App() {
+function RequireAuth() {
+  const { status } = useAuth();
   const location = useLocation();
-
+  if (status === 'loading') return <FullScreenLoader />;
+  if (status !== 'authed') return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
-        {/* Auth Routes */}
-        <Route element={<AuthLayout />}>
+    <FamilyProvider>
+      <QuickAddProvider>
+        <AppShell />
+      </QuickAddProvider>
+    </FamilyProvider>
+  );
+}
+
+function GuestOnly() {
+  const { status } = useAuth();
+  if (status === 'loading') return <FullScreenLoader />;
+  if (status === 'authed') return <Navigate to="/app" replace />;
+  return <Outlet />;
+}
+
+export default function App() {
+  return (
+    <Suspense fallback={<FullScreenLoader />}>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route element={<GuestOnly />}>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
-          <Route path="/verify-email/:token" element={<VerifyEmail />} />
         </Route>
+        <Route path="/verify-email/:token" element={<VerifyEmail />} />
+        <Route path="/e/:token" element={<PublicEmergency />} />
+        <Route path="/s/:token" element={<PublicShare />} />
 
-        {/* Protected Dashboard Routes */}
-        <Route element={<ProtectedRoute />}>
-          <Route element={<DashboardLayout />}>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/family" element={<FamilyVault />} />
-            <Route path="/intelligence" element={<Intelligence />} />
-            <Route path="/predict" element={<Predict />} />
-            <Route path="/doctor-brief" element={<PreDoctorBrief />} />
-            <Route path="/emergency-card" element={<EmergencyCard />} />
+        <Route path="/app" element={<RequireAuth />}>
+          <Route element={<Suspense fallback={<PageSkeleton />}><Outlet /></Suspense>}>
+            <Route index element={<Today />} />
+            <Route path="family" element={<Family />} />
+            <Route path="family/:id" element={<MemberDetail />} />
+            <Route path="family/:id/brief" element={<Brief />} />
+            <Route path="medicines" element={<Medicines />} />
+            <Route path="vitals" element={<Vitals />} />
+            <Route path="records" element={<Records />} />
+            <Route path="appointments" element={<Appointments />} />
+            <Route path="vaccines" element={<Vaccines />} />
+            <Route path="expenses" element={<Expenses />} />
+            <Route path="emergency" element={<Emergency />} />
+            <Route path="assistant" element={<Assistant />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="*" element={<NotFound inApp />} />
           </Route>
         </Route>
-
-        {/* 404 Route */}
+        <Route path="/dashboard" element={<Navigate to="/app" replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
-    </AnimatePresence>
+    </Suspense>
   );
 }
-
-export default App;

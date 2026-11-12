@@ -1,20 +1,23 @@
 # ArogyaPredict — ML Service Dependencies
 # ==========================================
+
 # Core
 flask==3.1.1
-flask-cors==5.0.1
-python-dotenv==1.1.0
+flask-cors==6.0.1
+python-dotenv==1.1.1
 
-# ML & Data Science (will be used in Phase 6)
-pandas==2.2.3
-numpy==2.2.5
-scikit-learn==1.6.1
-xgboost==3.0.0
-shap==0.47.2
-joblib==1.5.1
+# ML & Data Science
+pandas==3.0.6
+numpy==2.5.3
+scikit-learn==1.8.0
+xgboost==3.2.0
+joblib==1.6.0
 
-# PDF & NLP (will be used in Phase 5–6)
+# PDF & NLP
 # spacy==3.8.4
+
+# Explainability
+# shap==0.50.0
 
 # Utilities
 gunicorn==23.0.0

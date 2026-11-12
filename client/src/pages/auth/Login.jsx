@@ -1,121 +1,68 @@
-import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { HiOutlineEnvelope, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeSlash } from 'react-icons/hi2';
+import { LuArrowRight, LuSparkles } from 'react-icons/lu';
 import { useAuth } from '../../context/AuthContext';
-import Input from '../../components/ui/Input';
+import { errorMessage } from '../../api/client';
+import { Input } from '../../components/ui/Field';
 import Button from '../../components/ui/Button';
+import AuthLayout from './AuthLayout';
+import GoogleButton from './GoogleButton';
+
+export function DemoButton({ className }) {
+  const { demo } = useAuth();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button variant="secondary" className={className} icon={LuSparkles} loading={busy}
+      onClick={async () => {
+        setBusy(true);
+        try { await demo(); navigate('/app'); } catch (e) { toast.error(errorMessage(e)); setBusy(false); }
+      }}>
+      Explore a sample family
+    </Button>
+  );
+}
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const from = location.state?.from?.pathname || '/dashboard';
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm();
-
-  const onSubmit = async (data) => {
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
     try {
-      setIsSubmitting(true);
-      await login(data);
-      toast.success('Welcome back!');
-      navigate(from, { replace: true });
+      await login(form.email.trim(), form.password);
+      navigate(location.state?.from || '/app', { replace: true });
     } catch (err) {
-      toast.error(err.response?.data?.message || err.message || 'Login failed');
+      setError(errorMessage(err));
     } finally {
-      setIsSubmitting(false);
+      setBusy(false);
     }
   };
 
   return (
-    <div className="w-full">
-      <div className="text-center sm:text-left mb-8">
-        <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Sign In</h2>
-        <p className="text-slate-500 mt-2 text-sm">
-          Welcome back! Please enter your details to access your health dashboard.
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <Input
-          label="Email Address"
-          type="email"
-          placeholder="name@example.com"
-          icon={HiOutlineEnvelope}
-          error={errors.email?.message}
-          {...register('email', {
-            required: 'Email address is required',
-            pattern: {
-              value: /^\S+@\S+\.\S+$/,
-              message: 'Please enter a valid email address',
-            },
-          })}
-        />
-
+    <AuthLayout title="Welcome back" subtitle="Sign in to your family's health vault."
+      footer={<>New here? <Link to="/register" className="link font-semibold text-ink">Create a free account</Link></>}>
+      <form onSubmit={submit} className="space-y-4">
+        <Input label="Email" type="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required autoFocus />
         <div>
-          <div className="relative">
-            <Input
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              placeholder="••••••••"
-              icon={HiOutlineLockClosed}
-              error={errors.password?.message}
-              {...register('password', {
-                required: 'Password is required',
-              })}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-9 text-slate-400 hover:text-slate-600 focus:outline-none"
-            >
-              {showPassword ? (
-                <HiOutlineEyeSlash className="w-5 h-5" />
-              ) : (
-                <HiOutlineEye className="w-5 h-5" />
-              )}
-            </button>
-          </div>
-          <div className="flex justify-end mt-1.5">
-            <Link
-              to="/forgot-password"
-              className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:underline"
-            >
-              Forgot password?
-            </Link>
-          </div>
+          <Input label="Password" type="password" autoComplete="current-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+          <Link to="/forgot-password" className="mt-2 inline-block text-[13px] font-medium text-ink-3 hover:text-ink">Forgot password?</Link>
         </div>
-
-        <Button
-          type="submit"
-          variant="primary"
-          size="lg"
-          className="w-full shadow-lg shadow-emerald-500/20"
-          loading={isSubmitting}
-        >
-          Sign In
-        </Button>
+        {error && <p className="rounded-xl bg-bad-soft px-3.5 py-2.5 text-sm text-bad">{error}</p>}
+        <Button type="submit" size="lg" className="w-full" loading={busy} iconRight={LuArrowRight}>Sign in</Button>
       </form>
-
-      <div className="mt-8 text-center border-t border-slate-200 pt-6">
-        <p className="text-sm text-slate-600">
-          Don't have an account?{' '}
-          <Link
-            to="/register"
-            className="font-semibold text-emerald-600 hover:text-emerald-700 hover:underline"
-          >
-            Create an account
-          </Link>
-        </p>
+      <div className="my-6 flex items-center gap-3 text-xs text-ink-4"><span className="h-px flex-1 bg-line" />or<span className="h-px flex-1 bg-line" /></div>
+      <div className="space-y-3">
+        <GoogleButton />
+        <DemoButton className="w-full" />
       </div>
-    </div>
+    </AuthLayout>
   );
 }

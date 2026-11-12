@@ -1,29 +1,13 @@
 import { validationResult } from 'express-validator';
 import ApiError from '../utils/ApiError.js';
-import { HTTP_STATUS } from '../constants/index.js';
 
-/**
- * Validate express-validator rules
- * @param {Array} validations - Array of express-validator rules
- * @returns {Function} Express middleware
- */
-const validate = (validations) => {
-  return async (req, res, next) => {
-    // Run all validations
-    await Promise.all(validations.map((validation) => validation.run(req)));
-
-    const errors = validationResult(req);
-    
-    if (errors.isEmpty()) {
-      return next();
-    }
-
-    const extractedErrors = errors.array().map((err) => ({ [err.path]: err.msg }));
-
-    return next(
-      new ApiError(HTTP_STATUS.BAD_REQUEST, 'Validation Error', extractedErrors)
-    );
-  };
+/** Runs express-validator chains and returns a single readable 400 on failure. */
+const validate = (validations) => async (req, _res, next) => {
+  await Promise.all(validations.map((v) => v.run(req)));
+  const result = validationResult(req);
+  if (result.isEmpty()) return next();
+  const errors = result.array().map((e) => ({ field: e.path, message: e.msg }));
+  return next(ApiError.badRequest(errors[0].message, errors));
 };
 
 export default validate;

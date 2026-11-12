@@ -1,85 +1,41 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { HiCheckCircle, HiXCircle } from 'react-icons/hi2';
-import { verifyEmail } from '../../services/authService';
-import Loader from '../../components/ui/Loader';
-import Button from '../../components/ui/Button';
+import { useEffect, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { LuCircleCheck, LuCircleX } from 'react-icons/lu';
+import { api, errorMessage } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
+import Button, { Spinner } from '../../components/ui/Button';
+import AuthLayout from './AuthLayout';
 
 export default function VerifyEmail() {
   const { token } = useParams();
-  const [loading, setLoading] = useState(true);
-  const [success, setSuccess] = useState(false);
-  const [message, setMessage] = useState('');
+  const { isAuthed, reloadUser } = useAuth();
+  const [state, setState] = useState('loading');
+  const [msg, setMsg] = useState('');
+  const once = useRef(false);
 
   useEffect(() => {
-    if (token) {
-      handleVerification();
-    } else {
-      setLoading(false);
-      setSuccess(false);
-      setMessage('Invalid verification token');
-    }
-  }, [token]);
-
-  const handleVerification = async () => {
-    try {
-      setLoading(true);
-      const res = await verifyEmail(token);
-      setSuccess(true);
-      setMessage(res.message || 'Email verified successfully!');
-    } catch (err) {
-      setSuccess(false);
-      setMessage(err.response?.data?.message || err.message || 'Verification failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="w-full text-center py-8">
-        <Loader size="lg" text="Verifying your email address..." />
-      </div>
-    );
-  }
+    if (once.current) return;
+    once.current = true;
+    api.get(`/auth/verify-email/${token}`)
+      .then(() => { setState('ok'); if (isAuthed) reloadUser(); })
+      .catch((e) => { setState('error'); setMsg(errorMessage(e)); });
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="w-full text-center space-y-6">
-      {success ? (
-        <>
-          <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
-            <HiCheckCircle className="w-10 h-10" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">Email Verified!</h2>
-            <p className="text-slate-500 mt-2 text-sm max-w-sm mx-auto">{message}</p>
-          </div>
-          <div className="pt-4">
-            <Link to="/dashboard">
-              <Button variant="primary" className="w-full shadow-lg shadow-emerald-500/20">
-                Go to Dashboard
-              </Button>
-            </Link>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
-            <HiXCircle className="w-10 h-10" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">Verification Failed</h2>
-            <p className="text-slate-500 mt-2 text-sm max-w-sm mx-auto">{message}</p>
-          </div>
-          <div className="pt-4">
-            <Link to="/login">
-              <Button variant="outline" className="w-full">
-                Back to Sign In
-              </Button>
-            </Link>
-          </div>
-        </>
+    <AuthLayout title={state === 'ok' ? 'Email verified' : state === 'error' ? 'Link not valid' : 'Verifying…'}>
+      {state === 'loading' && <Spinner className="h-6 w-6" />}
+      {state === 'ok' && (
+        <div className="space-y-5">
+          <p className="flex items-center gap-2 text-ink-2"><LuCircleCheck className="h-5 w-5 text-ok" />You'll now get reminders and the morning digest by email.</p>
+          <Button to={isAuthed ? '/app' : '/login'} size="lg">{isAuthed ? 'Go to Today' : 'Sign in'}</Button>
+        </div>
       )}
-    </div>
+      {state === 'error' && (
+        <div className="space-y-5">
+          <p className="flex items-center gap-2 text-ink-2"><LuCircleX className="h-5 w-5 text-bad" />{msg}</p>
+          <Button to={isAuthed ? '/app/settings' : '/login'} variant="secondary">{isAuthed ? 'Resend from Settings' : 'Sign in to resend'}</Button>
+        </div>
+      )}
+    </AuthLayout>
   );
 }

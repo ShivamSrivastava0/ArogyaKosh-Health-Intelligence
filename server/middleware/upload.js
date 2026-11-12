@@ -1,41 +1,51 @@
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 import multer from 'multer';
 import ApiError from '../utils/ApiError.js';
-import { HTTP_STATUS } from '../constants/index.js';
+import { env } from '../config/env.js';
 
-// Configuration
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-
-// Memory storage setup
-const storage = multer.memoryStorage();
-
-// File filter function
-const fileFilter = (req, file, cb) => {
-  if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new ApiError(HTTP_STATUS.BAD_REQUEST, 'Invalid file type. Only PDF, JPG, JPEG, and PNG are allowed.'), false);
-  }
+export const UPLOAD_ROOT = path.resolve(env.server.uploadDir);
+const ALLOWED = {
+  'application/pdf': '.pdf',
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
 };
 
-// Initialize multer
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: {
-    fileSize: MAX_FILE_SIZE,
+const storage = multer.diskStorage({
+  destination(req, _file, cb) {
+    const dir = path.join(UPLOAD_ROOT, String(req.user._id));
+    fs.mkdir(dir, { recursive: true }, (err) => cb(err, dir));
+  },
+  filename(_req, file, cb) {
+    cb(null, `${crypto.randomUUID()}${ALLOWED[file.mimetype]}`);
   },
 });
 
-/**
- * Middleware for single file upload
- * @param {string} fieldName - Form field name
- */
-export const uploadSingle = (fieldName) => upload.single(fieldName);
+const upload = multer({
+  storage,
+  limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter(_req, file, cb) {
+    if (ALLOWED[file.mimetype]) return cb(null, true);
+    return cb(ApiError.badRequest('Only PDF, JPG, PNG or WEBP files are allowed'));
+  },
+});
 
-/**
- * Middleware for multiple files upload
- * @param {string} fieldName - Form field name
- * @param {number} maxCount - Max number of files
- */
-export const uploadMultiple = (fieldName, maxCount) => upload.array(fieldName, maxCount);
+export const uploadSingle = (field) => upload.single(field);
+
+/** Absolute path for a stored key, guarded against path traversal. */
+export const resolveUpload = (key) => {
+  const abs = path.resolve(UPLOAD_ROOT, key);
+  if (!abs.startsWith(UPLOAD_ROOT)) throw ApiError.badRequest('Invalid file path');
+  return abs;
+};
+
+export const removeUpload = async (key) => {
+  if (!key) return;
+  try {
+    await fs.promises.unlink(resolveUpload(key));
+  } catch {
+    /* already gone */
+  }
+};

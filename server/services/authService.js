@@ -1,138 +1,110 @@
-import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import fs from 'fs';
+import path from 'path';
+import User, { sha256 } from '../models/User.js';
+import Member from '../models/Member.js';
+import Medicine from '../models/Medicine.js';
+import DoseLog from '../models/DoseLog.js';
+import Vital from '../models/Vital.js';
+import Record from '../models/Record.js';
+import Reminder from '../models/Reminder.js';
+import Vaccination from '../models/Vaccination.js';
+import Expense from '../models/Expense.js';
+import ShareLink from '../models/ShareLink.js';
 import { env } from '../config/env.js';
 import { sendMail } from '../config/mail.js';
+import { UPLOAD_ROOT } from '../middleware/upload.js';
 
-/**
- * Hash a plain-text token using SHA-256
- * Used for securely storing verification/reset tokens in the DB
- * @param {string} token - Plain text token
- * @returns {string} Hashed token
- */
-export const hashToken = (token) => {
-  return crypto.createHash('sha256').update(token).digest('hex');
-};
+export const hashToken = sha256;
+const MAX_SESSIONS = 10;
 
-/**
- * Generate a pair of access + refresh tokens for a user
- * Also stores the hashed refresh token in the user's refreshTokens array
- * @param {Object} user - Mongoose user document
- * @returns {Promise<{ accessToken: string, refreshToken: string }>}
- */
-export const generateTokenPair = async (user) => {
+/** Issue an access + refresh pair and remember the (hashed) refresh token. */
+export const issueTokens = async (userId) => {
+  const user = await User.findById(userId).select('+refreshTokens');
   const accessToken = user.generateAccessToken();
   const refreshToken = user.generateRefreshToken();
-
-  // Decode refresh token to get expiry
-  const decoded = jwt.decode(refreshToken);
-  const expiresAt = new Date(decoded.exp * 1000);
-
-  // Store hashed refresh token (not plain text)
-  user.refreshTokens.push({
-    token: hashToken(refreshToken),
-    expiresAt,
-  });
-
-  // Clean up expired tokens while we're at it
-  user.refreshTokens = user.refreshTokens.filter(
-    (rt) => rt.expiresAt > new Date()
-  );
-
+  const { exp } = jwt.decode(refreshToken);
+  const now = new Date();
+  user.refreshTokens = [
+    ...user.refreshTokens.filter((t) => t.expiresAt > now),
+    { token: sha256(refreshToken), expiresAt: new Date(exp * 1000) },
+  ].slice(-MAX_SESSIONS);
+  user.lastLogin = now;
   await user.save();
-
   return { accessToken, refreshToken };
 };
 
-/**
- * Send email verification email
- * @param {Object} user - Mongoose user document
- * @param {string} rawToken - Plain text verification token
- */
-export const sendVerificationEmail = async (user, rawToken) => {
-  const verificationUrl = `${env.client.url}/verify-email/${rawToken}`;
-
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Inter', -apple-system, sans-serif;">
-      <div style="max-width: 560px; margin: 0 auto; padding: 40px 20px;">
-        <div style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
-          <div style="text-align: center; margin-bottom: 32px;">
-            <div style="display: inline-block; width: 48px; height: 48px; background: #059669; border-radius: 12px; line-height: 48px; color: white; font-weight: bold; font-size: 20px;">A</div>
-            <h1 style="color: #0f172a; font-size: 24px; margin: 16px 0 0;">Verify Your Email</h1>
-          </div>
-          
-          <p style="color: #475569; font-size: 15px; line-height: 1.6;">Hi <strong>${user.name}</strong>,</p>
-          <p style="color: #475569; font-size: 15px; line-height: 1.6;">Welcome to ArogyaKosh! Please verify your email address by clicking the button below.</p>
-          
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="${verificationUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #059669, #10b981); color: white; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 15px;">Verify Email Address</a>
-          </div>
-          
-          <p style="color: #94a3b8; font-size: 13px; line-height: 1.5;">This link expires in <strong>24 hours</strong>. If you didn't create an account, you can safely ignore this email.</p>
-          
-          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
-          
-          <p style="color: #94a3b8; font-size: 12px;">If the button doesn't work, copy and paste this URL into your browser:</p>
-          <p style="color: #3b82f6; font-size: 12px; word-break: break-all;">${verificationUrl}</p>
-        </div>
-        
-        <p style="text-align: center; color: #94a3b8; font-size: 12px; margin-top: 24px;">&copy; ${new Date().getFullYear()} ArogyaKosh. All rights reserved.</p>
-      </div>
-    </body>
-    </html>
-  `;
-
-  await sendMail(user.email, 'Verify your ArogyaKosh account', html);
+/** Rotate a refresh token. Reuse of an old token revokes every session. */
+export const rotateRefreshToken = async (refreshToken) => {
+  let payload;
+  try {
+    payload = jwt.verify(refreshToken, env.jwt.refreshSecret);
+  } catch {
+    return null;
+  }
+  const hashed = sha256(refreshToken);
+  const user = await User.findById(payload.id).select('+refreshTokens');
+  if (!user) return null;
+  if (!user.refreshTokens.some((t) => t.token === hashed)) {
+    user.refreshTokens = [];
+    await user.save();
+    return null;
+  }
+  user.refreshTokens = user.refreshTokens.filter((t) => t.token !== hashed);
+  await user.save();
+  return { user, tokens: await issueTokens(user._id) };
 };
 
-/**
- * Send password reset email
- * @param {Object} user - Mongoose user document
- * @param {string} rawToken - Plain text reset token
- */
-export const sendPasswordResetEmail = async (user, rawToken) => {
-  const resetUrl = `${env.client.url}/reset-password/${rawToken}`;
+export const revokeRefreshToken = async (userId, refreshToken) => {
+  const update = refreshToken
+    ? { $pull: { refreshTokens: { token: sha256(refreshToken) } } }
+    : { $set: { refreshTokens: [] } };
+  await User.updateOne({ _id: userId }, update);
+};
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Inter', -apple-system, sans-serif;">
-      <div style="max-width: 560px; margin: 0 auto; padding: 40px 20px;">
-        <div style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
-          <div style="text-align: center; margin-bottom: 32px;">
-            <div style="display: inline-block; width: 48px; height: 48px; background: #059669; border-radius: 12px; line-height: 48px; color: white; font-weight: bold; font-size: 20px;">A</div>
-            <h1 style="color: #0f172a; font-size: 24px; margin: 16px 0 0;">Reset Your Password</h1>
-          </div>
-          
-          <p style="color: #475569; font-size: 15px; line-height: 1.6;">Hi <strong>${user.name}</strong>,</p>
-          <p style="color: #475569; font-size: 15px; line-height: 1.6;">We received a request to reset your password. Click the button below to set a new password.</p>
-          
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="${resetUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #059669, #10b981); color: white; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 15px;">Reset Password</a>
-          </div>
-          
-          <p style="color: #94a3b8; font-size: 13px; line-height: 1.5;">This link expires in <strong>1 hour</strong>. If you didn't request a password reset, you can safely ignore this email.</p>
-          
-          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
-          
-          <p style="color: #94a3b8; font-size: 12px;">If the button doesn't work, copy and paste this URL into your browser:</p>
-          <p style="color: #3b82f6; font-size: 12px; word-break: break-all;">${resetUrl}</p>
-        </div>
-        
-        <p style="text-align: center; color: #94a3b8; font-size: 12px; margin-top: 24px;">&copy; ${new Date().getFullYear()} ArogyaKosh. All rights reserved.</p>
-      </div>
-    </body>
-    </html>
-  `;
+const emailShell = (title, body, cta, url) => `<!doctype html><html><body style="margin:0;background:#f6f6f3;font-family:-apple-system,Segoe UI,Inter,sans-serif">
+<div style="max-width:520px;margin:0 auto;padding:40px 20px">
+<div style="font-weight:700;font-size:18px;color:#111;margin-bottom:24px">arogya<span style="background:#d4f25a;padding:0 4px;border-radius:4px">kosh</span></div>
+<div style="background:#fff;border:1px solid #e7e6e1;border-radius:16px;padding:32px">
+<h1 style="font-size:22px;margin:0 0 12px;color:#111">${title}</h1>
+<div style="color:#55554f;font-size:15px;line-height:1.6">${body}</div>
+${cta ? `<a href="${url}" style="display:inline-block;margin-top:24px;background:#111;color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:600">${cta}</a>
+<p style="color:#8a8a84;font-size:12px;margin-top:24px;word-break:break-all">Or paste this link: ${url}</p>` : ''}
+</div><p style="color:#8a8a84;font-size:12px;text-align:center;margin-top:20px">ArogyaKosh · Family health, organised.</p></div></body></html>`;
 
-  await sendMail(user.email, 'Reset your ArogyaKosh password', html);
+export const sendVerificationEmail = (user, raw) => {
+  const url = `${env.client.url}/verify-email/${raw}`;
+  return sendMail(user.email, 'Verify your ArogyaKosh email',
+    emailShell('Confirm your email', `Hi ${user.name.split(' ')[0]}, confirm your email so we can send you refill and appointment reminders. The link is valid for 24 hours.`, 'Verify email', url));
+};
+
+export const sendPasswordResetEmail = (user, raw) => {
+  const url = `${env.client.url}/reset-password/${raw}`;
+  return sendMail(user.email, 'Reset your ArogyaKosh password',
+    emailShell('Reset your password', `We received a request to reset your password. The link is valid for 1 hour. If this wasn't you, you can ignore this email.`, 'Choose a new password', url));
+};
+
+export { emailShell };
+
+/** Everything the user has stored, as one JSON document. */
+export const exportAccount = async (userId) => {
+  const q = { owner: userId };
+  const [user, members, medicines, doseLogs, vitals, records, reminders, vaccinations, expenses] = await Promise.all([
+    User.findById(userId),
+    Member.find(q), Medicine.find(q), DoseLog.find(q), Vital.find(q), Record.find(q),
+    Reminder.find(q), Vaccination.find(q), Expense.find(q),
+  ]);
+  return { exportedAt: new Date(), format: 'arogyakosh/v1', user, members, medicines, doseLogs, vitals, records, reminders, vaccinations, expenses };
+};
+
+/** Permanently remove the account, all records and uploaded files. */
+export const deleteAccount = async (userId) => {
+  const q = { owner: userId };
+  await Promise.all([
+    Member.deleteMany(q), Medicine.deleteMany(q), DoseLog.deleteMany(q), Vital.deleteMany(q),
+    Record.deleteMany(q), Reminder.deleteMany(q), Vaccination.deleteMany(q), Expense.deleteMany(q),
+    ShareLink.deleteMany(q),
+  ]);
+  await User.deleteOne({ _id: userId });
+  await fs.promises.rm(path.join(UPLOAD_ROOT, String(userId)), { recursive: true, force: true });
 };
