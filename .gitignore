@@ -51,3 +51,6 @@ ml-service/models/*.pkl
 # ----- Coverage -----
 coverage/
 .nyc_output/
+
+# ----- Pre-rebuild sources kept for reference -----
+_legacy/

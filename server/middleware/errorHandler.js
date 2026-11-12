@@ -1,67 +1,36 @@
-import ApiError from '../utils/ApiError.js';
-import { env } from '../config/env.js';
-import { HTTP_STATUS } from '../constants/index.js';
 import multer from 'multer';
+import { env } from '../config/env.js';
 
-/**
- * Global error handling middleware
- */
-const errorHandler = (err, req, res, next) => {
-  let error = { ...err };
-  error.message = err.message;
-  
-  let customErrors = [];
+/* eslint-disable no-unused-vars */
+const errorHandler = (err, req, res, _next) => {
+  let status = err.statusCode || 500;
+  let message = err.message || 'Something went wrong';
+  let errors = err.errors && Array.isArray(err.errors) ? err.errors : [];
 
-  // Log error for dev
-  if (env.server.nodeEnv === 'development') {
-    console.error(err);
+  if (err.name === 'ValidationError' && err.errors) {
+    status = 400;
+    errors = Object.values(err.errors).map((e) => ({ field: e.path, message: e.message }));
+    message = errors[0]?.message || 'Validation failed';
+  } else if (err.name === 'CastError') {
+    status = 400;
+    message = `Invalid value for ${err.path}`;
+  } else if (err.code === 11000) {
+    status = 409;
+    message = 'That record already exists';
+  } else if (err instanceof multer.MulterError) {
+    status = 400;
+    message = err.code === 'LIMIT_FILE_SIZE' ? 'File is too large (max 15 MB)' : err.message;
+  } else if (err.type === 'entity.parse.failed') {
+    status = 400;
+    message = 'Malformed JSON body';
   }
 
-  // Mongoose bad ObjectId
-  if (err.name === 'CastError') {
-    const message = `Resource not found with id of ${err.value}`;
-    error = new ApiError(HTTP_STATUS.NOT_FOUND, message);
+  if (status >= 500 && !err.isOperational) {
+    console.error(`[error] ${req.method} ${req.originalUrl}`, err);
+    if (env.server.isProd) message = 'Something went wrong. Please try again.';
   }
 
-  // Mongoose validation error
-  if (err.name === 'ValidationError') {
-    const message = 'Validation Error';
-    customErrors = Object.values(err.errors).map((val) => val.message);
-    error = new ApiError(HTTP_STATUS.BAD_REQUEST, message, customErrors);
-  }
-
-  // Mongoose duplicate key
-  if (err.code === 11000) {
-    const message = 'Duplicate field value entered';
-    error = new ApiError(HTTP_STATUS.BAD_REQUEST, message);
-  }
-
-  // JWT errors
-  if (err.name === 'JsonWebTokenError') {
-    const message = 'Invalid token';
-    error = new ApiError(HTTP_STATUS.UNAUTHORIZED, message);
-  }
-
-  if (err.name === 'TokenExpiredError') {
-    const message = 'Token expired';
-    error = new ApiError(HTTP_STATUS.UNAUTHORIZED, message);
-  }
-
-  // Multer errors
-  if (err instanceof multer.MulterError) {
-    const message = `File upload error: ${err.message}`;
-    error = new ApiError(HTTP_STATUS.BAD_REQUEST, message);
-  }
-
-  const statusCode = error.statusCode || HTTP_STATUS.INTERNAL_SERVER_ERROR;
-  const message = error.message || 'Server Error';
-
-  res.status(statusCode).json({
-    success: false,
-    message,
-    data: null,
-    errors: error.errors?.length ? error.errors : (env.server.nodeEnv === 'development' ? [err.stack] : ['Something went wrong']),
-  });
+  res.status(status).json({ success: false, message, data: null, errors });
 };
 
 export default errorHandler;

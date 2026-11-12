@@ -1,37 +1,33 @@
+import fs from 'fs';
 import app from './app.js';
-import connectDB from './config/db.js';
+import connectDB, { disconnectDB } from './config/db.js';
 import { env } from './config/env.js';
+import { UPLOAD_ROOT } from './middleware/upload.js';
+import { startJobs } from './jobs/index.js';
 
-// Handle Uncaught Exceptions
-process.on('uncaughtException', (err) => {
-  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
-  console.error(err.name, err.message);
-  process.exit(1);
-});
+const start = async () => {
+  await connectDB();
+  fs.mkdirSync(UPLOAD_ROOT, { recursive: true });
 
-// Start Server
-const startServer = async () => {
-  try {
-    // Connect to database
-    await connectDB();
+  const server = app.listen(env.server.port, () => {
+    console.log(`[api] ArogyaKosh API on http://localhost:${env.server.port}/api (${env.server.nodeEnv})`);
+  });
+  if (env.jobs.enabled) startJobs();
 
-    const server = app.listen(env.server.port, () => {
-      console.log(`Server running in ${env.server.nodeEnv} mode on port ${env.server.port}`);
+  const shutdown = (signal) => {
+    console.log(`[api] ${signal} received, shutting down`);
+    server.close(async () => {
+      await disconnectDB();
+      process.exit(0);
     });
-
-    // Handle Unhandled Promise Rejections
-    process.on('unhandledRejection', (err) => {
-      console.error('UNHANDLED REJECTION! 💥 Shutting down...');
-      console.error(err.name, err.message);
-      server.close(() => {
-        process.exit(1);
-      });
-    });
-
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  }
+    setTimeout(() => process.exit(1), 10000).unref();
+  };
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('unhandledRejection', (err) => console.error('[api] unhandled rejection', err));
 };
 
-startServer();
+start().catch((err) => {
+  console.error('[api] failed to start:', err);
+  process.exit(1);
+});

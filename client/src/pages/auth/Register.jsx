@@ -1,207 +1,70 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import toast from 'react-hot-toast';
-import {
-  HiOutlineUser,
-  HiOutlineEnvelope,
-  HiOutlineLockClosed,
-  HiOutlineEye,
-  HiOutlineEyeSlash,
-  HiCheckCircle,
-} from 'react-icons/hi2';
+import clsx from 'clsx';
+import { LuArrowRight, LuCheck } from 'react-icons/lu';
 import { useAuth } from '../../context/AuthContext';
-import Input from '../../components/ui/Input';
+import { errorMessage } from '../../api/client';
+import { Input } from '../../components/ui/Field';
 import Button from '../../components/ui/Button';
+import AuthLayout from './AuthLayout';
+import GoogleButton from './GoogleButton';
+import { DemoButton } from './Login';
+
+const RULES = [
+  ['8+ characters', (p) => p.length >= 8],
+  ['A letter', (p) => /[A-Za-z]/.test(p)],
+  ['A number', (p) => /\d/.test(p)],
+];
 
 export default function Register() {
-  const { register: registerAuth } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [errors, setErrors] = useState({});
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const pwOk = RULES.every(([, t]) => t(form.password));
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm();
-
-  const passwordValue = watch('password', '');
-
-  // Simple password strength calculation
-  const hasMinLength = passwordValue.length >= 8;
-  const hasUpper = /[A-Z]/.test(passwordValue);
-  const hasNumber = /[0-9]/.test(passwordValue);
-  const strengthScore = [hasMinLength, hasUpper, hasNumber].filter(Boolean).length;
-
-  const onSubmit = async (data) => {
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!pwOk) { setErrors({ password: 'Password does not meet the rules' }); return; }
+    setBusy(true);
+    setError('');
     try {
-      setIsSubmitting(true);
-      await registerAuth(data);
-      toast.success('Account created successfully!');
-      setRegisteredEmail(data.email);
+      await register({ name: form.name.trim(), email: form.email.trim(), password: form.password });
+      navigate('/app', { replace: true });
     } catch (err) {
-      toast.error(err.response?.data?.message || err.message || 'Registration failed');
+      const fe = err?.response?.data?.errors;
+      if (Array.isArray(fe)) setErrors(Object.fromEntries(fe.map((x) => [x.field, x.message])));
+      setError(errorMessage(err));
     } finally {
-      setIsSubmitting(false);
+      setBusy(false);
     }
   };
 
-  if (registeredEmail) {
-    return (
-      <div className="w-full text-center space-y-6">
-        <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
-          <HiCheckCircle className="w-10 h-10" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Account Created!</h2>
-          <p className="text-slate-500 mt-2 text-sm max-w-sm mx-auto">
-            We've sent a verification link to <strong className="text-slate-800">{registeredEmail}</strong>.
-            Please check your inbox to verify your account.
-          </p>
-        </div>
-        <div className="pt-4">
-          <Button
-            variant="primary"
-            className="w-full shadow-lg shadow-emerald-500/20"
-            onClick={() => navigate('/dashboard')}
-          >
-            Go to Dashboard
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const set = (k) => (e) => { setForm({ ...form, [k]: e.target.value }); setErrors({ ...errors, [k]: undefined }); };
 
   return (
-    <div className="w-full">
-      <div className="text-center sm:text-left mb-8">
-        <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Create Account</h2>
-        <p className="text-slate-500 mt-2 text-sm">
-          Join ArogyaKosh to manage your health records intelligently.
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <Input
-          label="Full Name"
-          type="text"
-          placeholder="John Doe"
-          icon={HiOutlineUser}
-          error={errors.name?.message}
-          {...register('name', {
-            required: 'Full name is required',
-            minLength: {
-              value: 3,
-              message: 'Name must be at least 3 characters',
-            },
-          })}
-        />
-
-        <Input
-          label="Email Address"
-          type="email"
-          placeholder="name@example.com"
-          icon={HiOutlineEnvelope}
-          error={errors.email?.message}
-          {...register('email', {
-            required: 'Email address is required',
-            pattern: {
-              value: /^\S+@\S+\.\S+$/,
-              message: 'Please enter a valid email address',
-            },
-          })}
-        />
-
+    <AuthLayout title="Create your family vault" subtitle="Free. Takes a minute. Add your parents and kids after."
+      footer={<>Already have an account? <Link to="/login" className="link font-semibold text-ink">Sign in</Link></>}>
+      <form onSubmit={submit} className="space-y-4">
+        <Input label="Your name" autoComplete="name" value={form.name} onChange={set('name')} error={errors.name} required autoFocus />
+        <Input label="Email" type="email" autoComplete="email" value={form.email} onChange={set('email')} error={errors.email} required />
         <div>
-          <div className="relative">
-            <Input
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              placeholder="••••••••"
-              icon={HiOutlineLockClosed}
-              error={errors.password?.message}
-              {...register('password', {
-                required: 'Password is required',
-                minLength: {
-                  value: 8,
-                  message: 'Password must be at least 8 characters',
-                },
-                validate: {
-                  hasUpper: (v) => /[A-Z]/.test(v) || 'Must contain at least one uppercase letter',
-                  hasNum: (v) => /[0-9]/.test(v) || 'Must contain at least one number',
-                },
-              })}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-9 text-slate-400 hover:text-slate-600 focus:outline-none"
-            >
-              {showPassword ? (
-                <HiOutlineEyeSlash className="w-5 h-5" />
-              ) : (
-                <HiOutlineEye className="w-5 h-5" />
-              )}
-            </button>
+          <Input label="Password" type="password" autoComplete="new-password" value={form.password} onChange={set('password')} error={errors.password} required />
+          <div className="mt-2 flex gap-3">
+            {RULES.map(([label, test]) => {
+              const ok = test(form.password);
+              return <span key={label} className={clsx('flex items-center gap-1 text-xs', ok ? 'text-ok' : 'text-ink-4')}><LuCheck className="h-3 w-3" />{label}</span>;
+            })}
           </div>
-
-          {/* Password strength visual indicator */}
-          {passwordValue && (
-            <div className="mt-2 space-y-1">
-              <div className="flex gap-1 h-1.5 w-full">
-                <div
-                  className={`h-full flex-1 rounded-full transition-all duration-300 ${
-                    strengthScore >= 1 ? 'bg-rose-500' : 'bg-slate-200'
-                  }`}
-                />
-                <div
-                  className={`h-full flex-1 rounded-full transition-all duration-300 ${
-                    strengthScore >= 2 ? 'bg-amber-500' : 'bg-slate-200'
-                  }`}
-                />
-                <div
-                  className={`h-full flex-1 rounded-full transition-all duration-300 ${
-                    strengthScore === 3 ? 'bg-emerald-500' : 'bg-slate-200'
-                  }`}
-                />
-              </div>
-              <p className="text-[11px] text-slate-500 flex justify-between">
-                <span>Must include: 8+ chars, 1 uppercase, 1 number</span>
-                <span className="font-semibold text-slate-700">
-                  {strengthScore === 1 && 'Weak'}
-                  {strengthScore === 2 && 'Medium'}
-                  {strengthScore === 3 && 'Strong'}
-                </span>
-              </p>
-            </div>
-          )}
         </div>
-
-        <Button
-          type="submit"
-          variant="primary"
-          size="lg"
-          className="w-full shadow-lg shadow-emerald-500/20"
-          loading={isSubmitting}
-        >
-          Create Account
-        </Button>
+        {error && <p className="rounded-xl bg-bad-soft px-3.5 py-2.5 text-sm text-bad">{error}</p>}
+        <Button type="submit" size="lg" className="w-full" loading={busy} iconRight={LuArrowRight}>Create account</Button>
+        <p className="text-xs leading-relaxed text-ink-3">ArogyaKosh helps you organise health information. It doesn't replace a doctor's advice.</p>
       </form>
-
-      <div className="mt-8 text-center border-t border-slate-200 pt-6">
-        <p className="text-sm text-slate-600">
-          Already have an account?{' '}
-          <Link
-            to="/login"
-            className="font-semibold text-emerald-600 hover:text-emerald-700 hover:underline"
-          >
-            Sign In
-          </Link>
-        </p>
-      </div>
-    </div>
+      <div className="my-6 flex items-center gap-3 text-xs text-ink-4"><span className="h-px flex-1 bg-line" />or<span className="h-px flex-1 bg-line" /></div>
+      <div className="space-y-3"><GoogleButton /><DemoButton className="w-full" /></div>
+    </AuthLayout>
   );
 }
