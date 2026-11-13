@@ -34,6 +34,11 @@ const medicineSchema = new Schema(
 
 medicineSchema.index({ owner: 1, active: 1 });
 
+medicineSchema.pre('validate', function checkDates(next) {
+  if (this.startDate && this.endDate && this.endDate < this.startDate) this.invalidate('endDate', 'End date must be on or after the start date');
+  next();
+});
+
 medicineSchema.pre('save', function normalise(next) {
   this.times = [...new Set(this.times)].sort();
   next();

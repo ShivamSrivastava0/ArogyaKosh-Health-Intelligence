@@ -18,7 +18,7 @@ export const generateSchedule = async (ownerId, member) => {
   if (age < 18) {
     for (const item of CHILD_SCHEDULE) {
       if (has.has(`${item.name}|${item.dose}`.toLowerCase())) continue;
-      docs.push({ owner: ownerId, member: member._id, name: item.name, dose: item.dose, dueDate: addOffset(member.dob, item.at), source: 'SCHEDULE' });
+      docs.push({ owner: ownerId, member: member._id, name: item.name, dose: item.dose, dueDate: addOffset(member.dob, item.at), notes: item.note || '', source: 'SCHEDULE' });
     }
   } else {
     const now = new Date();

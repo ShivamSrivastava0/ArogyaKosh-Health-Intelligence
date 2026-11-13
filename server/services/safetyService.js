@@ -5,16 +5,16 @@ const KNOWN_GENERICS = new Set([
   ...INTERACTIONS.flatMap((i) => [...i.a, ...i.b]),
   ...ALLERGY_CLASSES.flatMap((c) => c.ingredients),
 ]);
-const BRAND_KEYS = Object.keys(BRANDS).sort((a, b) => b.length - a.length);
-
-const norm = (s = '') => s.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+// Hyphens, dots and slashes become spaces so "Telma-H", "Telma H" and "TELMA.H" all match.
+const norm = (s = '') => s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+const BRAND_KEYS = Object.keys(BRANDS).map((k) => [norm(k), k]).sort((a, b) => b[0].length - a[0].length);
 
 /** Resolve a free-text medicine name (brand or generic) to generic ingredients. */
 export const ingredientsOf = (name) => {
   const n = norm(name);
   const found = new Set();
-  for (const brand of BRAND_KEYS) {
-    const re = new RegExp(`(^|\\s)${brand.replace(/[-]/g, '\\-')}(\\s|$|\\d)`);
+  for (const [key, brand] of BRAND_KEYS) {
+    const re = new RegExp(`(^|\\s)${key}(\\s|$|\\d)`);
     if (re.test(n)) {
       BRANDS[brand].forEach((g) => found.add(g));
       break;
@@ -27,6 +27,13 @@ export const ingredientsOf = (name) => {
 };
 
 const SEV_RANK = { HIGH: 3, MODERATE: 2, LOW: 1 };
+
+/** What the checker actually knows — surfaced in the UI so "no warning" is never read as "safe". */
+export const COVERAGE = {
+  interactionRules: INTERACTIONS.length,
+  brands: Object.keys(BRANDS).length,
+  allergyClasses: ALLERGY_CLASSES.length,
+};
 
 /**
  * Check a set of medicines (and optional allergy list) for:

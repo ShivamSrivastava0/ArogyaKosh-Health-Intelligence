@@ -1,7 +1,10 @@
 import mongoose from 'mongoose';
-import { VITAL_TYPES, VITALS, classifyVital } from '../data/vitals.js';
+import { VITAL_TYPES, VITALS, classifyVital, validateReading } from '../data/vitals.js';
 
 const { Schema } = mongoose;
+
+/** Where a reading came from — shown next to it so users know what to trust. */
+export const VITAL_SOURCES = ['MANUAL', 'REPORT_AI', 'REPORT_MANUAL'];
 
 const vitalSchema = new Schema(
   {
@@ -15,6 +18,7 @@ const vitalSchema = new Schema(
     at: { type: Date, default: () => new Date() },
     note: { type: String, trim: true, maxlength: 300, default: '' },
     record: { type: Schema.Types.ObjectId, ref: 'Record', default: null },
+    source: { type: String, enum: VITAL_SOURCES, default: 'MANUAL' },
   },
   { timestamps: true }
 );
@@ -23,15 +27,19 @@ vitalSchema.index({ member: 1, type: 1, at: -1 });
 
 vitalSchema.pre('validate', function derive(next) {
   const def = VITALS[this.type];
-  if (def) {
-    this.unit = def.unit;
-    if (def.dual && (this.value2 === null || this.value2 === undefined)) {
-      this.invalidate('value2', 'Diastolic value is required for blood pressure');
-      return next();
-    }
-    this.status = classifyVital(this.type, this.value, this.value2);
+  if (!def) return next();
+  const check = validateReading(this.type, this.value, def.dual ? this.value2 : undefined);
+  if (!check.ok) {
+    this.invalidate(def.dual && /diastolic|bottom/i.test(check.message) ? 'value2' : 'value', check.message);
+    return next();
   }
-  next();
+  if (this.at && this.at.getTime() > Date.now() + 10 * 60000) {
+    this.invalidate('at', 'A reading cannot be dated in the future');
+    return next();
+  }
+  this.unit = def.unit;
+  this.status = classifyVital(this.type, this.value, this.value2);
+  return next();
 });
 
 vitalSchema.set('toJSON', { transform(_d, ret) { delete ret.__v; return ret; } });

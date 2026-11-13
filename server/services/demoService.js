@@ -8,6 +8,7 @@ import Record from '../models/Record.js';
 import Reminder from '../models/Reminder.js';
 import Vaccination from '../models/Vaccination.js';
 import Expense from '../models/Expense.js';
+import { CircleMember, CircleInvite, Activity, Notification } from '../models/Circle.js';
 import { generateSchedule } from './vaccineService.js';
 import { isScheduledOn } from './medicineService.js';
 import { addDays, toDateKey } from '../utils/helpers.js';
@@ -44,6 +45,21 @@ export const createDemoAccount = async () => {
       .map((key) => ({ key, have: true, expiry: key === 'ors' ? ahead(20) : null })),
   });
   const owner = user._id;
+
+  // Care circle: Aarav's brother helps look after the parents.
+  const brother = await User.create({
+    name: 'Ishaan Sharma',
+    email: `demo-${crypto.randomBytes(5).toString('hex')}-ishaan@demo.arogyakosh.app`,
+    password: crypto.randomBytes(24).toString('hex'),
+    isEmailVerified: true,
+    isDemo: true,
+    prefs: { emailDigest: false, onboarded: true },
+  });
+  await CircleMember.create({ owner, user: brother._id, role: 'CAREGIVER', label: 'Brother', lastSeenAt: new Date(Date.now() - 40 * 60000) });
+  await CircleInvite.create({
+    owner, invitedBy: owner, email: 'homenurse@example.com', role: 'VIEWER', label: 'Home nurse',
+    tokenHash: crypto.randomBytes(24).toString('hex'), expiresAt: addDays(new Date(), 5),
+  });
 
   const [self, spouse, father, mother, daughter] = await Member.create([
     {
@@ -115,8 +131,12 @@ export const createDemoAccount = async () => {
         const weekend = [0, 6].includes(day.getDay());
         const eveningGlycomet = med.name === 'Glycomet' && t === '20:30';
         const takenRate = eveningGlycomet ? (weekend ? 0.4 : 0.68) : med.member.equals(father._id) ? 0.9 : 0.94;
-        if (r < takenRate) logs.push({ owner, member: med.member, medicine: med._id, date: key, time: t, status: 'TAKEN' });
-        else if (r < takenRate + 0.04) logs.push({ owner, member: med.member, medicine: med._id, date: key, time: t, status: 'SKIPPED' });
+        // Ishaan lives near the parents, so he marks most of their doses.
+        const parentMed = med.member.equals(father._id) || med.member.equals(mother._id);
+        const actor = parentMed && rand() < 0.75 ? brother : user;
+        const by = { by: actor._id, byName: actor.name };
+        if (r < takenRate) logs.push({ owner, member: med.member, medicine: med._id, date: key, time: t, status: 'TAKEN', ...by });
+        else if (r < takenRate + 0.04) logs.push({ owner, member: med.member, medicine: med._id, date: key, time: t, status: 'SKIPPED', ...by });
       }
     }
   }
@@ -222,6 +242,26 @@ export const createDemoAccount = async () => {
   await Expense.insertMany(expenses.map(([category, amount, d, vendor, member, paymentMode, taxDeductible]) => ({
     owner, category, amount, date: ago(d), vendor, member, paymentMode, taxDeductible,
   })));
+
+  // A week of shared activity so the circle timeline tells a story.
+  const act = (daysAgo, h, m, actorDoc, type, member, text, link = '') => ({
+    owner, actor: actorDoc?._id || null, actorName: actorDoc?.name || 'ArogyaKosh', member, type, text, link, at: ago(daysAgo, h, m),
+  });
+  await Activity.insertMany([
+    act(6, 20, 10, user, 'CIRCLE_JOINED', null, 'Ishaan Sharma joined the care circle as a caregiver', '/app/circle'),
+    act(5, 8, 45, brother, 'VITAL_LOGGED', father._id, 'Ishaan Sharma logged Rajesh\'s blood pressure: 141/91 mmHg (high)', '/app/vitals'),
+    act(4, 19, 5, user, 'RECORD_ADDED', mother._id, 'Aarav Sharma added "Thyroid profile" to Sunita\'s records', '/app/records'),
+    act(3, 21, 40, null, 'MISSED_DOSE', father._id, 'Rajesh\'s 8:30 pm Glycomet wasn\'t marked — the circle was alerted', '/app'),
+    act(2, 9, 20, brother, 'MEDICINE_REFILLED', father._id, 'Ishaan Sharma restocked Rajesh\'s Telma 40 mg (+30)', '/app/medicines'),
+    act(1, 8, 12, brother, 'VITAL_LOGGED', father._id, 'Ishaan Sharma logged Rajesh\'s blood pressure: 146/92 mmHg (high)', '/app/vitals'),
+    act(0, 6, 40, brother, 'DOSE_TAKEN', mother._id, 'Ishaan Sharma marked Sunita\'s Thyronorm (06:30) as taken', '/app'),
+    act(0, 8, 41, brother, 'DOSE_TAKEN', father._id, 'Ishaan Sharma marked Rajesh\'s Glycomet (08:30) as taken', '/app'),
+  ]);
+  await Notification.insertMany([
+    { user: owner, owner, type: 'MISSED_DOSE', level: 'warning', title: 'Rajesh hasn\'t taken Glycomet (8:30 pm)', body: 'The 8:30 pm dose wasn\'t marked. A quick call might help.', link: '/app', key: 'demo-missed-1', read: true, createdAt: ago(3, 21, 40) },
+    { user: owner, owner, type: 'CIRCLE_JOINED', level: 'info', title: 'Ishaan joined your care circle', body: 'As Brother', link: '/app/circle', key: 'demo-joined', read: true, createdAt: ago(6, 20, 10) },
+    { user: owner, owner, type: 'CRITICAL_READING', level: 'warning', title: 'Rajesh\'s BP was high again this morning', body: '146/92 mmHg, logged by Ishaan.', link: '/app/vitals', key: 'demo-bp', read: false, createdAt: ago(1, 8, 12) },
+  ]);
 
   return user;
 };

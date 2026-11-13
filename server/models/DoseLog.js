@@ -13,6 +13,8 @@ const doseLogSchema = new Schema(
     time: { type: String, required: true, match: /^\d{2}:\d{2}$/ },
     status: { type: String, enum: DOSE_STATUS, required: true },
     at: { type: Date, default: () => new Date() },
+    by: { type: Schema.Types.ObjectId, ref: 'User', default: null }, // who marked it (owner or a caregiver)
+    byName: { type: String, default: '' },
   },
   { timestamps: false }
 );

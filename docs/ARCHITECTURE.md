@@ -11,7 +11,6 @@ React (Vite, Tailwind)  ──HTTPS/JSON──▶  Express API  ──▶  Mongo
    └─ public pages /e/:token, /s/:token     └──▶  node-cron (demo purge, 07:30 digest)
 ```
 
-`ml-service/` (Flask) is not wired into the product: its models were trained on randomly generated data, so predictions now come from validated clinical equations plus per-person statistical learning (see ArogyaPredict below).
 
 ## 2. Domain model
 
@@ -125,7 +124,28 @@ tones, member tints; Bricolage Grotesque + Geist).
 - Public endpoints return minimal projections and never expose internal file paths.
 - Account deletion removes every collection row and the user's upload directory.
 
-## 7. Testing
+## 7. Care Circle (shared households)
+
+A household is the owner's account. Other users join it through `CircleMember` (role `CAREGIVER` or `VIEWER`).
+
+- **Access:** `middleware/household.js` reads `X-Household`, verifies membership, and sets `req.ownerId` (scopes every query), `req.household` and `req.role`. `requireWrite` blocks viewers from writes; `ownerOnly` guards circle management, member deletion and QR resets.
+- **Invites:** random 24-byte token, stored as SHA-256, valid 7 days, one live invite per email, accepted only by the invited email.
+- **Accountability:** `Activity` records every meaningful action with its actor; `DoseLog.by/byName` shows who marked a dose.
+- **Alerts:** `Notification` (unique per user + key, so alerts never repeat). `scanMissedDoses` runs every 10 minutes for doses unmarked an hour after their time; `alertIfCritical` fires when a critical reading is saved; `sendWeeklyReports` runs Sundays at 18:00. Email goes out only when SMTP is configured.
+- **Cleanup:** deleting an account removes its circle, its seats in other circles, invites, activity and notifications.
+
+## 8. Trust layers
+
+| Layer | Where | What it guarantees |
+|---|---|---|
+| Reference data with citations | `server/data/*`, `services/predict/riskModels.js` | Thresholds, schedules and equations come from named publications. |
+| Verification suite | `server/tests/*.test.js` (`npm test`) | Published worked examples and boundary values are reproduced; regressions fail CI. |
+| Plausibility & unit checks | `data/vitals.js#validateReading`, model `pre('validate')` hooks | Impossible / mis-unit values and future dates never enter the database. |
+| Provenance | `Vital.source`, `Record.summarySource`, prediction `evidence`/`caveats` | Every number can be traced to who entered it, when, and from what. |
+| AI grounding | `assistantService.verifyNumbers`, extraction re-validation | AI output is checked against records; unmatched values are flagged to the user. |
+| Coverage disclosure | `safetyService.COVERAGE`, unrecognised-medicine reporting | The app states what it did not check. |
+
+## 9. Testing
 
 `npm run smoke` (in `server/`) boots the API on an in-memory MongoDB and runs
 ~80 end-to-end checks across every route group, including auth edge cases,

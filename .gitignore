@@ -41,13 +41,6 @@ yarn-error.log*
 server/uploads/*
 !server/uploads/.gitkeep
 
-# ----- ML Models -----
-ml-service/models/*.joblib
-ml-service/models/*.pkl
-
-# ----- Jupyter -----
-.ipynb_checkpoints/
-
 # ----- Coverage -----
 coverage/
 .nyc_output/

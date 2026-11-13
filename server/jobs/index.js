@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import User from '../models/User.js';
 import { deleteAccount, emailShell } from '../services/authService.js';
 import { todayFeed } from '../services/insightService.js';
+import { scanMissedDoses, sendWeeklyReports } from '../services/circleService.js';
 import { sendMail, isMailConfigured } from '../config/mail.js';
 import { env } from '../config/env.js';
 import { toDateKey } from '../utils/helpers.js';
@@ -36,7 +37,11 @@ export const sendDailyDigests = async () => {
 };
 
 export const startJobs = () => {
+  const timezone = process.env.TZ || 'Asia/Kolkata';
   cron.schedule('17 * * * *', () => purgeDemoAccounts().catch((e) => console.error('[jobs] purge', e)));
-  cron.schedule('30 7 * * *', () => sendDailyDigests().catch((e) => console.error('[jobs] digest', e)), { timezone: process.env.TZ || 'Asia/Kolkata' });
-  console.log('[jobs] scheduled: demo purge (hourly), daily digest (07:30)');
+  cron.schedule('30 7 * * *', () => sendDailyDigests().catch((e) => console.error('[jobs] digest', e)), { timezone });
+  // Care circle: doses unmarked an hour after their time alert the family (deduplicated).
+  cron.schedule('*/10 * * * *', () => scanMissedDoses().catch((e) => console.error('[jobs] missed-dose', e)), { timezone });
+  cron.schedule('0 18 * * 0', () => sendWeeklyReports().catch((e) => console.error('[jobs] weekly', e)), { timezone });
+  console.log('[jobs] scheduled: demo purge (hourly), daily digest (07:30), missed-dose scan (every 10 min), weekly report (Sun 18:00)');
 };

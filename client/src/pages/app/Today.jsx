@@ -29,7 +29,7 @@ const nowHm = () => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
 
-function DoseRow({ dose, isToday, onSet }) {
+function DoseRow({ dose, isToday, isFuture, onSet, me }) {
   const late = isToday && dose.status === 'PENDING' && dose.time < nowHm();
   const done = dose.status === 'TAKEN';
   const skipped = dose.status === 'SKIPPED';
@@ -46,11 +46,12 @@ function DoseRow({ dose, isToday, onSet }) {
           {dose.medicine.mealTiming !== 'ANY' && <><span>·</span><span>{MEAL_TIMING[dose.medicine.mealTiming]}</span></>}
           {dose.medicine.dose !== 1 && <><span>·</span><span>×{dose.medicine.dose}</span></>}
           {late && <Badge tone="warn">Due</Badge>}
+          {dose.byName && dose.status !== "PENDING" && <><span>·</span><span>by {dose.byName === me ? "you" : firstName(dose.byName)}</span></>}
           {dose.medicine.stock?.low && <Badge tone="bad">{dose.medicine.stock.stock} left</Badge>}
           {dose.missRisk && <span title="ArogyaPredict learned this dose is often missed — set an alarm"><Badge tone="info"><LuBrainCircuit className="h-3 w-3" />{dose.missRisk}% likely missed</Badge></span>}
         </p>
       </div>
-      {dose.status === 'PENDING' ? (
+      {isFuture ? <span className="text-xs text-ink-4">Upcoming</span> : dose.status === 'PENDING' ? (
         <div className="flex items-center gap-1.5">
           <button type="button" onClick={() => onSet(dose, 'SKIPPED')} className="grid h-9 w-9 place-items-center rounded-full text-ink-3 hover:bg-ink/5 hover:text-ink" aria-label={`Skip ${dose.medicine.name}`} title="Skip">
             <LuSkipForward className="h-4 w-4" />
@@ -247,7 +248,7 @@ export default function Today() {
                       <s.icon className="h-3.5 w-3.5" /> {s.label}
                       <span className="text-ink-4">{s.doses.filter((d) => d.status === 'TAKEN').length}/{s.doses.length}</span>
                     </p>
-                    <ul className="divide-y divide-line-soft">{s.doses.map((d) => <DoseRow key={d.id} dose={d} isToday={isToday} onSet={setDose} />)}</ul>
+                    <ul className="divide-y divide-line-soft">{s.doses.map((d) => <DoseRow key={d.id} dose={d} isToday={isToday} isFuture={date > todayKey()} onSet={setDose} me={user?.name} />)}</ul>
                   </section>
                 ))}
                 {sum.total > 0 && sum.taken === sum.total && (

@@ -35,7 +35,27 @@
   .bg-dots { background-image: radial-gradient(#cbd8e2 1px, transparent 1px); background-size: 18px 18px; }
 }
 
+/* Medical ID card effects */
+.holo {
+  background: linear-gradient(115deg, #ff9a9e, #fad0c4, #a1c4fd, #c2e9fb, #d4fc79, #ff9a9e);
+  background-size: 300% 300%;
+  animation: holo 6s ease-in-out infinite;
+}
+@keyframes holo { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+.shine::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.45) 50%, transparent 60%);
+  transform: translateX(-100%);
+  animation: shine 1.4s 0.35s cubic-bezier(.2, .8, .2, 1) both;
+}
+@keyframes shine { to { transform: translateX(100%); } }
+.card-in { animation: card-in 0.7s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes card-in { from { opacity: 0; transform: translateY(16px) rotateX(18deg); } to { opacity: 1; transform: none; } }
+
 @media print {
+  .print-card-sheet, .print-card-sheet * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { background: #fff !important; }
   .no-print { display: none !important; }
   .print-plain { box-shadow: none !important; border-color: #ddd !important; }

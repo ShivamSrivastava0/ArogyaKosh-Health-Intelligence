@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { LuSend, LuSparkles, LuDatabase, LuSiren, LuRotateCcw } from 'react-icons/lu';
+import { LuSend, LuSparkles, LuDatabase, LuSiren, LuRotateCcw, LuShieldCheck } from 'react-icons/lu';
 import { api, errorMessage } from '../../api/client';
 import { useFamily } from '../../context/FamilyContext';
 import { PageHeader, Badge } from '../../components/ui/Display';
@@ -50,7 +50,7 @@ export default function Assistant() {
     setBusy(true);
     try {
       const r = await api.post('/assistant', { message, history });
-      setMessages((m) => [...m, { role: 'assistant', content: r.reply, mode: r.mode }]);
+      setMessages((m) => [...m, { role: 'assistant', content: r.reply, mode: r.mode, verification: r.verification }]);
     } catch (e) {
       setMessages((m) => [...m, { role: 'assistant', content: errorMessage(e), mode: 'error' }]);
     } finally {
@@ -85,7 +85,15 @@ export default function Assistant() {
               m.role === 'user' ? 'rounded-br-lg bg-ink text-white' : m.mode === 'safety' ? 'rounded-bl-lg border border-bad/30 bg-bad-soft' : m.mode === 'error' ? 'rounded-bl-lg bg-bad-soft text-bad' : 'card rounded-bl-lg')}>
               {m.role === 'assistant' ? <Markdown text={m.content} /> : m.content}
               {m.role === 'assistant' && MODE[m.mode] && (
-                <div className="mt-3"><Badge tone={MODE[m.mode].tone}>{(() => { const I = MODE[m.mode].icon; return <I className="h-3 w-3" />; })()}{MODE[m.mode].label}</Badge></div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Badge tone={MODE[m.mode].tone}>{(() => { const I = MODE[m.mode].icon; return <I className="h-3 w-3" />; })()}{MODE[m.mode].label}</Badge>
+                  {m.verification?.checked > 0 && !m.verification.unverified.length && <Badge tone="ok"><LuShieldCheck className="h-3 w-3" />{m.verification.checked} value{m.verification.checked > 1 ? 's' : ''} matched to your records</Badge>}
+                </div>
+              )}
+              {m.verification?.unverified?.length > 0 && (
+                <p className="mt-3 rounded-xl bg-warn-soft px-3 py-2 text-xs text-warn">
+                  Couldn't match {m.verification.unverified.join(', ')} to your records. Treat {m.verification.unverified.length > 1 ? 'these' : 'this'} as unverified and check the readings directly.
+                </p>
               )}
             </div>
           </div>

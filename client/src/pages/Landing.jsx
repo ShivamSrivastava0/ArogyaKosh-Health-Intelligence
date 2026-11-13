@@ -60,12 +60,12 @@ function PredictHero() {
     <div className="relative mx-auto w-full max-w-[560px] pb-10 pt-8">
       <HeroArt className="w-full" />
       <div className="card absolute -left-2 -top-2 w-48 -rotate-2 p-3 shadow-pop sm:-left-10">
-        <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-brand"><LuBrainCircuit className="h-3.5 w-3.5" />ArogyaPredict</p>
+        <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-brand"><LuBrainCircuit className="h-3.5 w-3.5" />ArogyaPredict · example</p>
         <p className="mt-1 text-sm font-semibold">Papa's heart age: 74</p>
         <p className="text-xs text-ink-3">8 yrs older · 10-yr risk 21%</p>
       </div>
       <div className="card absolute -bottom-4 -right-2 hidden w-48 rotate-2 p-3 shadow-pop sm:block lg:-right-6">
-        <p className="text-xs text-ink-3">Your fasting sugar</p>
+        <p className="text-xs text-ink-3">Example · your fasting sugar</p>
         <p className="mt-0.5 text-sm font-semibold">Trending into prediabetes</p>
         <svg viewBox="0 0 200 44" className="mt-2 h-9 w-full"><rect x="0" y="28" width="200" height="16" fill="#DCF5EC" /><polyline points="0,36 30,33 60,30 90,26 110,22" fill="none" stroke="#0B2239" strokeWidth="2.5" strokeLinecap="round" /><polyline points="110,22 150,15 200,8" fill="none" stroke="#0D9488" strokeWidth="2.5" strokeDasharray="5 4" strokeLinecap="round" /></svg>
         <p className="text-2xs font-semibold text-warn">Projected borderline-high by March</p>
@@ -197,7 +197,7 @@ export default function Landing() {
             <div className="relative">
               <ForecastArt className="w-full" />
               <div className="absolute -bottom-4 left-4 right-4 rounded-2xl bg-white p-4 text-ink shadow-pop sm:left-10 sm:right-auto sm:w-72">
-                <p className="flex items-center gap-1.5 text-xs font-semibold text-brand"><LuSlidersHorizontal className="h-3.5 w-3.5" />What-if simulator</p>
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-brand"><LuSlidersHorizontal className="h-3.5 w-3.5" />What-if simulator · example</p>
                 <p className="mt-1 text-sm">If Papa’s BP drops to 120:</p>
                 <p className="tnum mt-1 font-display text-2xl font-semibold">21% <span className="text-base text-ink-3">→</span> <span className="text-ok">13%</span></p>
                 <p className="text-xs text-ink-3">10-year heart & stroke risk</p>

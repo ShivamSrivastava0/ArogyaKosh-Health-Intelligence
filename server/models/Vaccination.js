@@ -18,6 +18,11 @@ const vaccinationSchema = new Schema(
   { timestamps: true, toJSON: { virtuals: true } }
 );
 
+vaccinationSchema.pre('validate', function checkGiven(next) {
+  if (this.givenDate && this.givenDate.getTime() > Date.now() + 86400000) this.invalidate('givenDate', 'A vaccine cannot be marked as given in the future');
+  next();
+});
+
 vaccinationSchema.index({ member: 1, name: 1, dose: 1 });
 
 /** GIVEN | OVERDUE | DUE (within 30 days) | UPCOMING */

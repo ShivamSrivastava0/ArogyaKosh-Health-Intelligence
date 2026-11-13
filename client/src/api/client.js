@@ -15,14 +15,25 @@ export const tokens = {
   clear() {
     localStorage.removeItem(TOKEN);
     localStorage.removeItem(REFRESH);
+    localStorage.removeItem('ak.household');
   },
 };
 
 // Generous because AI report reading can take a while; normal calls return in ms.
+const HOUSEHOLD = 'ak.household';
+
+/** Which family's data the app is showing (own household or one joined via Care Circle). */
+export const activeHousehold = {
+  get: () => { try { return localStorage.getItem(HOUSEHOLD); } catch { return null; } },
+  set: (id) => { try { if (id) localStorage.setItem(HOUSEHOLD, id); else localStorage.removeItem(HOUSEHOLD); } catch { /* ignore */ } },
+};
+
 const http = axios.create({ baseURL: API_URL, timeout: 90000 });
 
 http.interceptors.request.use((config) => {
   if (tokens.access) config.headers.Authorization = `Bearer ${tokens.access}`;
+  const hh = activeHousehold.get();
+  if (hh) config.headers['X-Household'] = hh;
   return config;
 });
 

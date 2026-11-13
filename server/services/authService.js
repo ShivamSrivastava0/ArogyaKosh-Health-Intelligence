@@ -11,11 +11,11 @@ import Reminder from '../models/Reminder.js';
 import Vaccination from '../models/Vaccination.js';
 import Expense from '../models/Expense.js';
 import ShareLink from '../models/ShareLink.js';
+import { CircleMember, CircleInvite, Activity, Notification } from '../models/Circle.js';
 import { env } from '../config/env.js';
 import { sendMail } from '../config/mail.js';
 import { UPLOAD_ROOT } from '../middleware/upload.js';
 
-export const hashToken = sha256;
 const MAX_SESSIONS = 10;
 
 /** Issue an access + refresh pair and remember the (hashed) refresh token. */
@@ -104,6 +104,11 @@ export const deleteAccount = async (userId) => {
     Member.deleteMany(q), Medicine.deleteMany(q), DoseLog.deleteMany(q), Vital.deleteMany(q),
     Record.deleteMany(q), Reminder.deleteMany(q), Vaccination.deleteMany(q), Expense.deleteMany(q),
     ShareLink.deleteMany(q),
+    // Care circle: this household's circle, and this user's seats in other circles.
+    CircleMember.deleteMany({ $or: [{ owner: userId }, { user: userId }] }),
+    CircleInvite.deleteMany(q),
+    Activity.deleteMany(q),
+    Notification.deleteMany({ $or: [{ owner: userId }, { user: userId }] }),
   ]);
   await User.deleteOne({ _id: userId });
   await fs.promises.rm(path.join(UPLOAD_ROOT, String(userId)), { recursive: true, force: true });

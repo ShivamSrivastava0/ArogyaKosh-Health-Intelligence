@@ -1,8 +1,10 @@
 import Vital from '../models/Vital.js';
+import Member from '../models/Member.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { crud } from './crudFactory.js';
-import { VITALS } from '../data/vitals.js';
+import { VITALS, formatVital } from '../data/vitals.js';
+import { logActivity, alertIfCritical } from '../services/circleService.js';
 import { latestVitals } from '../services/vitalService.js';
 import { assertObjectId } from '../utils/helpers.js';
 
@@ -19,6 +21,18 @@ const base = crud({
     return f;
   },
   maxLimit: 1000,
+  hooks: {
+    async afterSave(doc, req, isNew) {
+      if (!isNew) return;
+      const member = await Member.findById(doc.member).select('name');
+      const first = member?.name?.split(' ')[0] || 'someone';
+      await logActivity(req, {
+        type: 'VITAL_LOGGED', member: doc.member, link: `/app/vitals?member=${doc.member}&type=${doc.type}`,
+        text: `${req.user.name} logged ${first}'s ${VITALS[doc.type].label.toLowerCase()}: ${formatVital(doc.type, doc.value, doc.value2)}${doc.status !== 'NORMAL' ? ` (${doc.status.toLowerCase()})` : ''}`,
+      });
+      await alertIfCritical(req, doc, member);
+    },
+  },
 });
 
 export const { list: listVitals, create: createVital, update: updateVital, remove: deleteVital } = base;
@@ -29,7 +43,7 @@ export const catalog = (_req, res) => ApiResponse.success(res, 'Vital types', {
 
 export const latest = asyncHandler(async (req, res) => {
   const ids = req.query.member ? [assertObjectId(req.query.member, 'member')] : undefined;
-  const map = await latestVitals(req.user._id, ids);
+  const map = await latestVitals(req.ownerId, ids);
   const items = {};
   for (const [mid, types] of map) items[mid] = types;
   return ApiResponse.success(res, 'Latest vitals', { items });

@@ -9,8 +9,9 @@ import { crud } from './crudFactory.js';
 import { assertMembersOwned } from '../services/memberService.js';
 import { removeUpload, resolveUpload, UPLOAD_ROOT } from '../middleware/upload.js';
 import { escapeRegex, pick } from '../utils/helpers.js';
+import { logActivity } from '../services/circleService.js';
 import { extractLabReport, isAiEnabled } from '../services/aiService.js';
-import { VITALS } from '../data/vitals.js';
+import { VITALS, validateReading } from '../data/vitals.js';
 
 const FIELDS = ['member', 'title', 'category', 'date', 'doctor', 'facility', 'tags', 'notes', 'summary'];
 
@@ -39,6 +40,7 @@ const base = crud({
     beforeSave(doc, req) {
       const tags = normaliseTags(req.body.tags);
       if (tags) doc.tags = tags;
+      if (doc.isModified('summary')) doc.summarySource = 'USER';
     },
   },
 });
@@ -51,7 +53,7 @@ export const createRecord = asyncHandler(async (req, res) => {
   try {
     if (!data.member) throw ApiError.badRequest('Choose a family member');
     if (!data.title) throw ApiError.badRequest('Give the record a title');
-    await assertMembersOwned(req.user._id, [data.member]);
+    await assertMembersOwned(req.ownerId, [data.member]);
     if (req.file) {
       data.file = {
         key: path.relative(UPLOAD_ROOT, req.file.path).split(path.sep).join('/'),
@@ -60,8 +62,9 @@ export const createRecord = asyncHandler(async (req, res) => {
         size: req.file.size,
       };
     }
-    const record = await Record.create({ ...data, owner: req.user._id });
+    const record = await Record.create({ ...data, owner: req.ownerId });
     await record.populate('member', 'name color');
+    await logActivity(req, { type: 'RECORD_ADDED', member: record.member._id, link: '/app/records', text: `${req.user.name} added "${record.title}" to ${record.member.name.split(' ')[0]}'s records` });
     return ApiResponse.created(res, 'Saved to locker', { record });
   } catch (err) {
     if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
@@ -104,14 +107,22 @@ export const extract = asyncHandler(async (req, res) => {
   } catch (e) {
     throw ApiError.unavailable(`Could not read this report (${e.message})`);
   }
-  if (result?.summary && !record.summary) {
+  if (result?.summary && (!record.summary || record.summarySource === 'AI')) {
     record.summary = result.summary;
+    record.summarySource = 'AI';
     if (!record.facility && result.facility) record.facility = result.facility;
     if (!record.doctor && result.doctor) record.doctor = result.doctor;
     await record.save();
   }
-  const values = (result?.values || []).map((v) => ({ ...v, known: Boolean(VITALS[v.type]) }));
-  return ApiResponse.success(res, 'Report read', { ...result, values, record });
+  // Second layer: every AI-read value must pass the same plausibility and unit
+  // checks as a hand-typed reading. Failures are shown, never pre-selected.
+  const values = (result?.values || []).map((v) => {
+    const known = Boolean(VITALS[v.type]);
+    const check = known ? validateReading(v.type, v.value, v.value2 ?? undefined) : { ok: true };
+    return { ...v, known, plausible: check.ok, issue: check.ok ? null : check.message };
+  });
+  const reportDate = result?.reportDate && !Number.isNaN(Date.parse(result.reportDate)) && Date.parse(result.reportDate) <= Date.now() + 86400000 ? result.reportDate : null;
+  return ApiResponse.success(res, 'Report read', { ...result, reportDate, values, record });
 });
 
 /** Save confirmed extracted values as readings linked to the record. */
@@ -119,9 +130,16 @@ export const importValues = asyncHandler(async (req, res) => {
   const record = await base.findOwned(req);
   const values = Array.isArray(req.body.values) ? req.body.values : [];
   const at = req.body.date ? new Date(req.body.date) : record.date;
-  const docs = values
-    .filter((v) => VITALS[v.type] && Number.isFinite(Number(v.value)))
-    .map((v) => ({ owner: req.user._id, member: record.member, type: v.type, value: Number(v.value), value2: v.value2 != null ? Number(v.value2) : null, at, record: record._id, note: `From ${record.title}` }));
-  const saved = await Vital.create(docs);
-  return ApiResponse.created(res, `${saved.length} reading(s) added to trends`, { count: saved.length });
+  const docs = [];
+  const skipped = [];
+  for (const v of values) {
+    const check = VITALS[v.type] ? validateReading(v.type, v.value, v.value2 ?? undefined) : { ok: false, message: 'Not a tracked measurement' };
+    if (!check.ok) { skipped.push({ name: v.name || v.type, reason: check.message }); continue; }
+    docs.push({
+      owner: req.ownerId, member: record.member, type: v.type, value: Number(v.value), value2: v.value2 != null ? Number(v.value2) : null,
+      at, record: record._id, note: `From ${record.title}`, source: req.body.source === 'REPORT_MANUAL' ? 'REPORT_MANUAL' : 'REPORT_AI',
+    });
+  }
+  const saved = docs.length ? await Vital.create(docs) : [];
+  return ApiResponse.created(res, `${saved.length} reading(s) added to trends${skipped.length ? `, ${skipped.length} skipped` : ''}`, { count: saved.length, skipped });
 });

@@ -121,6 +121,32 @@ function RiskScale({ risk }) {
   );
 }
 
+const SRC = { MANUAL: 'entered by you', REPORT_AI: 'read from a report, confirmed by you', REPORT_MANUAL: 'from a report' };
+
+/** Exactly which data produced the number — so the user can check it themselves. */
+function Evidence({ c }) {
+  const e = c.evidence || {};
+  const rows = [
+    e.bp && ['Blood pressure', `${e.bp.value} mmHg — ${e.bp.method}, ${fmtDate(e.bp.from)}${e.bp.n > 1 ? ` to ${fmtDate(e.bp.to)}` : ''}`],
+    e.tc && ['Total cholesterol', `${e.tc.value} mg/dL on ${fmtDate(e.tc.at)} (${SRC[e.tc.source] || 'entered'})`],
+    e.hdl && ['HDL cholesterol', `${e.hdl.value} mg/dL on ${fmtDate(e.hdl.at)} (${SRC[e.hdl.source] || 'entered'})`],
+    e.bmi && ['BMI', `${e.bmi.value} — from ${e.bmi.from}`],
+    e.treatedBp && ['BP treatment', e.treatedBp],
+    e.diabetes && ['Diabetes', e.diabetes],
+    e.smoking && ['Tobacco', e.smoking],
+  ].filter(Boolean);
+  return (
+    <details className="mt-5 rounded-2xl border border-line bg-paper/60 p-4 text-[13px]" open={c.caveats?.length > 0}>
+      <summary className="cursor-pointer font-semibold">Based on {rows.length} inputs{c.caveats?.length ? ` · ${c.caveats.length} note${c.caveats.length > 1 ? 's' : ''}` : ''}</summary>
+      <dl className="mt-3 space-y-1.5">
+        {rows.map(([k, v]) => <div key={k} className="flex gap-3"><dt className="w-32 shrink-0 text-ink-3">{k}</dt><dd className="text-ink-2">{v}</dd></div>)}
+      </dl>
+      {c.caveats?.length > 0 && <ul className="mt-3 space-y-1 text-warn">{c.caveats.map((x) => <li key={x}>• {x}</li>)}</ul>}
+      <p className="mt-3 flex items-start gap-1.5 text-[11px] text-ink-4"><LuInfo className="mt-0.5 h-3 w-3 shrink-0" />{c.note} Formula verified against the published worked examples (D'Agostino 2008).</p>
+    </details>
+  );
+}
+
 function HeartCard({ report, memberId }) {
   const quick = useQuickAdd();
   const c = report.cardio;
@@ -174,7 +200,7 @@ function HeartCard({ report, memberId }) {
         </div>
       )}
       <div className="mt-6"><WhatIf memberId={memberId} cardio={c} /></div>
-      <p className="mt-4 flex items-start gap-1.5 text-[11px] leading-relaxed text-ink-4"><LuInfo className="mt-0.5 h-3 w-3 shrink-0" />{c.note} Inputs: BP {c.inputs.sbp}{c.inputs.treatedBp ? ' (on treatment)' : ''}{c.inputs.tc ? `, TC ${c.inputs.tc}, HDL ${c.inputs.hdl}` : `, BMI ${c.inputs.bmi}`}{c.inputs.diabetic ? ', diabetes' : ''}{c.inputs.smoker ? ', smoker' : ''}.</p>
+      <Evidence c={c} />
     </Card>
   );
 }

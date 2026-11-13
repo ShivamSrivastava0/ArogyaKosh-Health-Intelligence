@@ -1,5 +1,5 @@
 import {
-  LuHouse, LuUsers, LuPill, LuActivity, LuFileText, LuCalendarDays, LuSyringe, LuWallet, LuSiren, LuSparkles, LuSettings, LuBrainCircuit,
+  LuHouse, LuUsers, LuPill, LuActivity, LuFileText, LuCalendarDays, LuSyringe, LuWallet, LuSiren, LuSparkles, LuSettings, LuBrainCircuit, LuHandHeart,
 } from 'react-icons/lu';
 
 export const NAV = [
@@ -16,6 +16,7 @@ export const NAV = [
     { to: '/app/vaccines', label: 'Vaccines', icon: LuSyringe },
   ] },
   { group: 'Plan', items: [
+    { to: '/app/circle', label: 'Care Circle', icon: LuHandHeart },
     { to: '/app/emergency', label: 'Emergency', icon: LuSiren },
     { to: '/app/expenses', label: 'Expenses', icon: LuWallet },
     { to: '/app/assistant', label: 'Ask Kosh', icon: LuSparkles },

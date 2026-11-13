@@ -22,7 +22,7 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
         <div className="relative space-y-4">
           <FamilyArt className="mx-auto w-full max-w-sm" />
           <div className="rounded-3xl bg-white p-5 text-ink shadow-pop">
-            <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-[0.12em] text-brand"><LuBrainCircuit className="h-3.5 w-3.5" />ArogyaPredict · this week</p>
+            <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-[0.12em] text-brand"><LuBrainCircuit className="h-3.5 w-3.5" />ArogyaPredict · example</p>
             <p className="mt-2 text-sm font-semibold">Papa’s BP is improving — down 4 mmHg/month</p>
             <p className="mt-1 text-sm font-semibold">Your fasting sugar may reach prediabetes by March</p>
             <p className="mt-1 text-xs text-ink-3">Heart age, forecasts and missed-dose alerts for everyone at home.</p>

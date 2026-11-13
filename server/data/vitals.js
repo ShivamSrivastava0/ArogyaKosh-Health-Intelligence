@@ -116,6 +116,56 @@ export const formatVital = (type, value, value2) => {
   return def.dual ? `${value}/${value2} ${def.unit}` : `${value} ${def.unit}`;
 };
 
+/**
+ * Plausibility limits: values outside [min, max] are physiologically
+ * impossible (or a typo) and are rejected. `unit` catches the most common
+ * unit mix-ups and tells the user how to convert instead of silently storing
+ * a wrong number. Limits are deliberately wide — they block nonsense, not
+ * genuinely extreme (critical) readings.
+ */
+const mmolGlucose = (v) => (v > 1 && v < 35 ? `That looks like mmol/L. In mg/dL it is about ${Math.round(v * 18)}.` : null);
+const mmolChol = (factor) => (v) => (v > 0.5 && v < 20 ? `That looks like mmol/L. In mg/dL it is about ${Math.round(v * factor)}.` : null);
+export const LIMITS = {
+  BP: { min: 50, max: 260, min2: 30, max2: 160 },
+  HEART_RATE: { min: 25, max: 250 },
+  SPO2: { min: 50, max: 100 },
+  SUGAR_FASTING: { min: 20, max: 800, unit: mmolGlucose },
+  SUGAR_PP: { min: 20, max: 800, unit: mmolGlucose },
+  SUGAR_RANDOM: { min: 20, max: 800, unit: mmolGlucose },
+  HBA1C: { min: 3, max: 20, unit: (v) => (v > 20 && v < 200 ? `That looks like mmol/mol. In % it is about ${Math.round((v / 10.929 + 2.15) * 10) / 10}.` : null) },
+  WEIGHT: { min: 0.5, max: 400 },
+  TEMPERATURE: { min: 90, max: 110, unit: (v) => (v >= 30 && v <= 45 ? `That looks like °C. In °F it is ${Math.round((v * 9 / 5 + 32) * 10) / 10}.` : null) },
+  CHOLESTEROL_TOTAL: { min: 50, max: 1000, unit: mmolChol(38.67) },
+  LDL: { min: 10, max: 800, unit: mmolChol(38.67) },
+  HDL: { min: 5, max: 200, unit: mmolChol(38.67) },
+  TRIGLYCERIDES: { min: 10, max: 5000, unit: mmolChol(88.57) },
+  HEMOGLOBIN: { min: 2, max: 25, unit: (v) => (v > 25 && v < 250 ? `That looks like g/L. In g/dL it is ${Math.round(v) / 10}.` : null) },
+  VITAMIN_D: { min: 1, max: 300 },
+  VITAMIN_B12: { min: 20, max: 5000 },
+  TSH: { min: 0.001, max: 150 },
+  CREATININE: { min: 0.1, max: 25, unit: (v) => (v > 25 && v < 2000 ? `That looks like µmol/L. In mg/dL it is ${Math.round((v / 88.4) * 100) / 100}.` : null) },
+};
+
+/** @returns { ok: true } | { ok: false, message } */
+export const validateReading = (type, value, value2) => {
+  const def = VITALS[type];
+  const lim = LIMITS[type];
+  if (!def || !lim) return { ok: false, message: 'Unknown measurement type' };
+  const v = Number(value);
+  if (!Number.isFinite(v)) return { ok: false, message: `Enter a number for ${def.label.toLowerCase()}` };
+  if (v < lim.min || v > lim.max) {
+    const hint = lim.unit?.(v);
+    return { ok: false, message: hint ? `${def.label} of ${v} ${def.unit} isn't possible. ${hint}` : `${def.label} must be between ${lim.min} and ${lim.max} ${def.unit} — please check the reading.` };
+  }
+  if (def.dual) {
+    const d = Number(value2);
+    if (!Number.isFinite(d)) return { ok: false, message: 'Enter the diastolic (lower) number' };
+    if (d < lim.min2 || d > lim.max2) return { ok: false, message: `Diastolic must be between ${lim.min2} and ${lim.max2} mmHg — please check.` };
+    if (d >= v) return { ok: false, message: 'The top number (systolic) must be higher than the bottom number (diastolic). Were they swapped?' };
+  }
+  return { ok: true };
+};
+
 export const bmiStatus = (bmi) => {
   // Asian-Indian cut-offs (WHO expert consultation, 2004)
   if (!bmi) return null;

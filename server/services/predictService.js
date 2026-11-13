@@ -55,7 +55,21 @@ const gatherInputs = (member, readings, meds, household) => {
   const parents = household.filter((h) => String(h._id) !== String(member._id) && parentRelations.includes(h.relation));
   const parentDiabetic = parents.filter((p) => p.conditions.some((c) => /diabet/i.test(c.name))).length;
 
+  // Provenance for every model input: what value, from when, how many readings.
+  const latestRow = (type, days) => recent(type, days)[0] || null;
+  const ev = (row) => (row ? { value: row.value, at: row.at, source: row.source || 'MANUAL' } : null);
+  const evidence = {
+    bp: bp.length ? { value: `${Math.round(sbp)}/${Math.round(dbp)}`, n: bp.length, from: bp[bp.length - 1].at, to: bp[0].at, method: bp.length > 1 ? `median of last ${bp.length} readings` : 'single reading' } : null,
+    tc: ev(latestRow('CHOLESTEROL_TOTAL')),
+    hdl: ev(latestRow('HDL')),
+    hba1c: ev(latestRow('HBA1C')),
+    fasting: ev(latestRow('SUGAR_FASTING')),
+    creatinine: ev(latestRow('CREATININE')),
+    bmi: bmi ? { value: bmi, from: latestWeight ? `weight logged ${new Date(recent('WEIGHT', 180)[0].at).toDateString()}` : 'profile height & weight' } : null,
+  };
+
   return {
+    evidence,
     byType, sbp, dbp, bmi, hba1c, fasting, onBpMeds, knownDiabetic,
     tc: latest('CHOLESTEROL_TOTAL'), hdl: latest('HDL'), ldl: latest('LDL'), tg: latest('TRIGLYCERIDES'), creatinine: latest('CREATININE'),
     smoker: member.lifestyle?.smoking === 'CURRENT',
@@ -103,6 +117,22 @@ const cardioModel = (member, inp) => {
     ageGap: hAge !== null ? hAge - age : null,
     inputs: { age, sex, sbp: Math.round(inp.sbp), treatedBp: inp.onBpMeds, smoker: inp.smoker, diabetic: inp.diabetic, tc: inp.tc, hdl: inp.hdl, bmi: inp.bmi },
     levers: scenarios,
+    evidence: {
+      bp: inp.evidence.bp,
+      tc: inp.tc && inp.hdl ? inp.evidence.tc : null,
+      hdl: inp.tc && inp.hdl ? inp.evidence.hdl : null,
+      bmi: inp.tc && inp.hdl ? null : inp.evidence.bmi,
+      treatedBp: inp.onBpMeds ? 'On BP medicine (from medicine list)' : null,
+      diabetes: inp.diabetic ? (inp.knownDiabetic ? 'Diabetes from conditions / medicines' : 'Sugar results in the diabetes range') : null,
+      smoking: member.lifestyle?.smoking ? `Tobacco: ${member.lifestyle.smoking.toLowerCase()} (self-reported)` : null,
+    },
+    // Freshness warnings: old inputs are still used, but never silently.
+    caveats: [
+      inp.tc && inp.hdl && inp.evidence.tc && Date.now() - new Date(inp.evidence.tc.at) > 365 * DAY ? 'The cholesterol result is over a year old — a new lipid profile will make this more accurate.' : null,
+      inp.evidence.bp && inp.evidence.bp.n < 2 ? 'Based on a single BP reading. Log 2–3 more on different days for a reliable estimate.' : null,
+      !(inp.tc && inp.hdl) ? 'No lipid profile on file, so the BMI version of the model is used (less precise).' : null,
+      member.lifestyle?.smoking ? null : 'Tobacco use not answered — assumed non-smoker.',
+    ].filter(Boolean),
     note: 'Framingham can underestimate risk in South Asians — treat moderate results with extra care.',
   };
 };
@@ -248,7 +278,7 @@ const dataNeeds = (member, inp, cardio) => {
 export const predictMember = async (member, { household } = {}) => {
   const ownerId = member.owner;
   const [readings, meds, family] = await Promise.all([
-    Vital.find({ member: member._id, at: { $gte: new Date(Date.now() - 730 * DAY) } }).select('type value value2 at').lean(),
+    Vital.find({ member: member._id, at: { $gte: new Date(Date.now() - 730 * DAY) } }).select('type value value2 at source').lean(),
     Medicine.find({ member: member._id, active: true }),
     household ? Promise.resolve(household) : Member.find({ owner: ownerId }),
   ]);

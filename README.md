@@ -30,7 +30,9 @@ Predictions appear on Today, on every member profile, in the doctor brief and in
 | **Vaccines** | Full IAP childhood schedule generated from date of birth; adult boosters and yearly flu that reschedule themselves. |
 | **Appointments** | Visits, checkups and tests with repeat rules; calendar subscription (Google / Apple / Outlook) including medicine alarms. |
 | **Expenses** | Monthly, category and per-person breakdowns, Section 80D tagging, CSV export, financial-year view. |
-| **Health score** | An explainable 0–100 score per person — every factor shows its points and what to do next. Includes the Indian Diabetes Risk Score check. |
+| **Health check-up** | Each area (BP, sugar, BMI, cholesterol, habits, adherence, preventive care) compared with published clinical thresholds — "5 of 8 areas in range" — with what to do next. No invented composite score. |
+| **Care Circle** | Siblings, a spouse or a nurse co-manage the same family: Caregiver or View-only roles, email-locked invites, a shared "who did what" timeline, doses marked "by Ishaan", missed-dose and critical-reading alerts to everyone, and a weekly family report. |
+| **Medical ID cards** | Wallet-size (85.6 × 54 mm) red medical ID per person: QR front, allergies/contacts back, 3D flip on screen, prints front and back at true size. |
 | **Ask Kosh** | Questions about the family's records ("What was Papa's latest BP?"). Uses Gemini when configured, otherwise answers directly from saved data. Emergency phrases always route to 112/108. |
 
 Plus: one-click sample household, ⌘K command palette, morning email digest,
@@ -68,6 +70,7 @@ Optional integrations (all degrade gracefully when unset): `GEMINI_API_KEY`
 | server | `npm run dev` / `npm start` | API with nodemon / production |
 | server | `npm run dev:memory` | API on an in-memory database |
 | server | `npm run smoke` | End-to-end API checks on an in-memory database |
+| server | `npm test` | Medical-correctness suite: formulas and thresholds checked against published reference values |
 | client | `npm run dev` / `npm run build` | Vite dev server / production build |
 
 ## Project layout
@@ -85,6 +88,15 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the low-level design.
 - Serve `client/dist` from any static host; set `VITE_API_URL` at build time.
 - Run the API with `NODE_ENV=production`, a persistent `UPLOAD_DIR` volume, strong JWT secrets, `CLIENT_URL` set to your web origin and `PUBLIC_API_URL` to the public API URL.
 - Put both behind HTTPS.
+
+## How we keep health information trustworthy
+
+1. **Published sources only.** Every risk formula, threshold and schedule cites its source (Framingham/D'Agostino 2008, CKD-EPI 2021, ADA, AHA/ACC 2017, WHO Asian BMI, IAP-ACVIP 2023). No invented scores.
+2. **Automated verification.** `npm test` reproduces the published worked examples (e.g. Framingham 10.48% / 15.62%) and checks every threshold boundary, the vaccine table, and known drug interactions on every change.
+3. **Input plausibility.** Impossible readings are refused; unit mix-ups (mmol/L sugar, °C, mmol/mol HbA1c, µmol/L creatinine) are detected with the converted value; nothing can be dated in the future.
+4. **Provenance.** Each reading shows whether you typed it or it was read from a report; each prediction lists the exact readings and dates it used, and warns when inputs are old or thin.
+5. **AI is checked, never trusted blindly.** AI-read report values must pass the same plausibility checks and your confirmation; AI chat answers are scanned and any health number not found in your records is flagged as unverified.
+6. **Honest limits.** The interaction checker reports what it covers and which medicines it couldn't recognise — "no warning" is never presented as "safe".
 
 ## Disclaimer
 

@@ -1,5 +1,0 @@
-# Trained model files will be placed here after Phase 6 notebook training.
-# Expected files:
-#   - heart_disease_model.joblib
-#   - diabetes_model.joblib
-#   - hypertension_model.joblib

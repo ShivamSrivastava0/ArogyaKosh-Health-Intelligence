@@ -10,7 +10,7 @@ import InsightList from '../../components/predict/Insights';
 import { useApi, invalidate } from '../../hooks/useApi';
 import { api, errorMessage } from '../../api/client';
 import { useQuickAdd } from '../../context/QuickAddContext';
-import { Card, CardHeader, Avatar, Badge, Tabs, ScoreRing, KeyValue, PageSkeleton, ErrorNote } from '../../components/ui/Display';
+import { Card, CardHeader, Avatar, Badge, Tabs, KeyValue, PageSkeleton, ErrorNote } from '../../components/ui/Display';
 import { ActionMenu, useConfirm } from '../../components/ui/Overlay';
 import { Segmented, Field } from '../../components/ui/Field';
 import Button from '../../components/ui/Button';
@@ -28,14 +28,19 @@ function ScoreCard({ memberId }) {
   const { data } = useApi(`/members/${memberId}/score`);
   const s = data?.score;
   if (!s) return <Card className="h-64 animate-pulse" />;
+  const unknown = s.total - s.assessed;
   return (
     <Card className="p-5">
-      <div className="flex items-center gap-5">
-        <ScoreRing value={s.score} size={104} stroke={9} label="of 100" />
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="eyebrow">Health score</p>
-          <p className="mt-1 font-display text-2xl font-semibold">{s.grade}</p>
-          <p className="mt-1 text-xs leading-relaxed text-ink-3">Based on {s.coverage}% of the factors we look at.{s.coverage < 60 ? ' Add readings and lifestyle details for a sharper picture.' : ''}</p>
+          <p className="eyebrow">Health check-up</p>
+          <p className="mt-1 font-display text-2xl font-semibold">
+            {s.assessed ? <>{s.onTrack} of {s.assessed} <span className="text-base font-medium text-ink-3">areas in the healthy range</span></> : 'Not enough data yet'}
+          </p>
+          {unknown > 0 && <p className="mt-1 text-xs text-ink-3">{unknown} area{unknown > 1 ? 's' : ''} not checked yet — add readings or lifestyle answers.</p>}
+        </div>
+        <div className="flex shrink-0 gap-1">
+          {s.factors.map((f) => <span key={f.key} title={f.label} className={clsx('h-6 w-1.5 rounded-full', STATE_COLOR[f.state])} />)}
         </div>
       </div>
       <ul className="mt-5 space-y-3">
@@ -45,13 +50,13 @@ function ScoreCard({ memberId }) {
               <span className={clsx('h-2 w-2 shrink-0 rounded-full', STATE_COLOR[f.state])} />
               <span className="w-36 shrink-0 text-[13px] font-medium">{f.label}</span>
               <span className="min-w-0 flex-1 truncate text-[13px] text-ink-3" title={f.detail}>{f.detail}</span>
-              <span className="tnum hidden text-xs text-ink-3 sm:inline">{f.points === null ? '—' : `${Math.round(f.points)}/${f.max}`}</span>
+              <span className={clsx('hidden text-xs font-medium sm:inline', { good: 'text-ok', ok: 'text-warn', bad: 'text-bad', unknown: 'text-ink-4' }[f.state])}>{{ good: 'In range', ok: 'Borderline', bad: 'Out of range', unknown: 'Not checked' }[f.state]}</span>
             </div>
             {f.tip && <p className="ml-5 mt-1 text-xs text-ink-2">→ {f.tip}</p>}
           </li>
         ))}
       </ul>
-      <p className="mt-5 flex items-start gap-1.5 text-[11px] leading-relaxed text-ink-4"><LuInfo className="mt-0.5 h-3 w-3 shrink-0" />A wellness indicator built from your own readings and habits — not a medical diagnosis.</p>
+      <p className="mt-5 flex items-start gap-1.5 text-[11px] leading-relaxed text-ink-4"><LuInfo className="mt-0.5 h-3 w-3 shrink-0" />Each area is compared with standard clinical thresholds (AHA/ACC for BP, ADA for sugar, WHO Asian BMI). We don't merge them into a single score — there is no validated way to weight them.</p>
     </Card>
   );
 }

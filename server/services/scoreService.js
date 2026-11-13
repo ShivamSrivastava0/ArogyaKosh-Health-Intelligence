@@ -8,10 +8,12 @@ const STATUS_POINTS = { NORMAL: 1, BORDERLINE: 0.65, LOW: 0.5, HIGH: 0.25, CRITI
 const toState = (ratio) => (ratio === null ? 'unknown' : ratio >= 0.9 ? 'good' : ratio >= 0.6 ? 'ok' : 'bad');
 
 /**
- * Explainable health score (0–100) for one member.
- * Every factor reports points/max so the UI can show exactly why the score is
- * what it is. Unknown factors are excluded, and `coverage` tells the user how
- * much of the picture we have.
+ * Health check-up summary for one member.
+ * Each area is judged only against published thresholds (BP, sugar, BMI,
+ * lipids…) or the person's own answers. We deliberately do NOT blend areas into
+ * one weighted 0–100 number: those weights would be invented, and a precise-
+ * looking score built on invented weights is exactly what users must not trust.
+ * Instead we report how many checked areas are in range, and what is unknown.
  */
 export const healthScore = (member, { vitals = {}, adherencePct = null, overdueVaccines = 0, lastCheckupAt = null } = {}) => {
   const factors = [];
@@ -96,22 +98,19 @@ function childScore(member, { factors, add, adherencePct, overdueVaccines, lastC
   add('sleep', 'Sleep', 5, sleep ? (sleep >= 9 ? 1 : sleep >= 8 ? 0.6 : 0.3) : null, sleep ? `${sleep} h / night` : 'Not recorded', null);
   add('adherence', 'Medicine adherence', 10, adherencePct === null ? null : adherencePct / 100,
     adherencePct === null ? 'No scheduled medicines' : `${adherencePct}% of doses taken`, null);
-  return summarise(factors, 0.4);
+  return summarise(factors);
 }
 
-function summarise(factors, minCoverage = 0.3) {
-  const known = factors.filter((f) => f.points !== null);
-  const totalMax = factors.reduce((s, f) => s + f.max, 0);
-  const knownMax = known.reduce((s, f) => s + f.max, 0);
-  const points = known.reduce((s, f) => s + f.points, 0);
-  const coverage = Math.round((knownMax / totalMax) * 100);
-  const score = knownMax && knownMax / totalMax >= minCoverage ? Math.round((points / knownMax) * 100) : null;
+function summarise(factors) {
+  // Strip the internal ratio scaffolding; only the threshold verdicts leave this module.
+  const clean = factors.map(({ key, label, state, detail, tip }) => ({ key, label, state, detail, tip }));
+  const assessed = clean.filter((f) => f.state !== 'unknown');
   return {
-    score,
-    grade: score === null ? 'Not enough data' : score >= 85 ? 'Excellent' : score >= 70 ? 'Good' : score >= 55 ? 'Fair' : 'Needs attention',
-    coverage,
-    confidence: coverage >= 70 ? 'high' : coverage >= 40 ? 'medium' : 'low',
-    factors,
+    onTrack: assessed.filter((f) => f.state === 'good').length,
+    needsAttention: assessed.filter((f) => f.state !== 'good').length,
+    assessed: assessed.length,
+    total: clean.length,
+    factors: clean,
   };
 }
 

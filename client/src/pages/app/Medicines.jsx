@@ -199,12 +199,20 @@ function Adherence({ member }) {
 function Safety() {
   const { data, loading } = useApi('/medicines/safety');
   if (loading) return <div className="h-40" />;
+  const unrec = data?.unrecognised || [];
+  const coverageNote = data && (
+    <div className="rounded-2xl border border-line bg-surface p-4 text-[13px] text-ink-2">
+      <p><b>What was checked:</b> {data.checked} active medicine{data.checked === 1 ? '' : 's'} against {data.coverage.interactionRules} well-documented interaction rules, duplicate ingredients and {data.coverage.allergyClasses} allergy groups ({data.coverage.brands} Indian brand names recognised).</p>
+      {unrec.length > 0 && <p className="mt-2 text-warn"><b>Not checked</b> (name not recognised): {unrec.map((u) => u.name).join(', ')}. Ask your pharmacist about these.</p>}
+      <p className="mt-2 text-ink-3">This is a safety net, not a complete drug database — no warning does not prove a combination is safe.</p>
+    </div>
+  );
   if (!data?.items.length) {
-    return <Card><Empty icon={LuShieldCheck} title="No known interactions found" body="We checked every family member's active medicines against each other and their recorded allergies. Always confirm new prescriptions with your pharmacist." /></Card>;
+    return <div className="space-y-4"><Card><Empty icon={LuShieldCheck} title="No known interactions found" body="Nothing in our curated list matched. Always confirm new prescriptions with your pharmacist." /></Card>{coverageNote}</div>;
   }
   return (
     <div className="space-y-4">
-      <p className="text-sm text-ink-3">Flags from a curated list of well-documented interactions and allergy cross-reactions. It's a prompt to ask your doctor or pharmacist — not a diagnosis.</p>
+      {coverageNote}
       {data.items.map(({ member, warnings }) => (
         <Card key={member._id} className="p-5">
           <div className="mb-3 flex items-center gap-2.5"><Avatar name={member.name} color={member.color} size="sm" /><h3 className="font-sans text-[15px] font-semibold tracking-normal">{member.name}</h3></div>
