@@ -13,6 +13,7 @@ import Button from '../../components/ui/Button';
 import { Input, Segmented } from '../../components/ui/Field';
 import DataTable from '../../components/ui/DataTable';
 import { Bars } from '../../components/charts/Charts';
+import { PillsArt } from '../../components/illustrations';
 import { MEAL_TIMING, MED_FORMS, WEEKDAYS } from '../../lib/constants';
 import { fmtClock, fmtDate, daysFromNow, firstName, keyToDate, toInputDate } from '../../lib/format';
 
@@ -145,7 +146,7 @@ export function MedicineTable({ member, active = true, compact }) {
     <>
       <DataTable columns={columns} rows={items} loading={loading} onRowClick={(m) => quick.open('medicine', { medicine: m })}
         rowClassName={(m) => (m.stockInfo?.low && active ? 'bg-bad-soft/30' : '')}
-        empty={<Empty compact icon={LuPill} title={active ? 'No active medicines' : 'Nothing stopped'}
+        empty={<Empty compact art={PillsArt} title={active ? 'No active medicines' : 'Nothing stopped'}
           body={active ? 'Add daily medicines, vitamins or short courses. Doses show on Today with reminders.' : 'Medicines you stop keep their history here.'}
           action={active && <Button size="sm" icon={LuPlus} onClick={() => quick.open('medicine', { member })}>Add medicine</Button>} />} />
       <RefillModal med={refill} onClose={() => setRefill(null)} />
@@ -160,7 +161,7 @@ function Adherence({ member }) {
   const chart = useMemo(() => (data?.byDay || []).map((d) => ({
     label: keyToDate(d.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
     value: d.pct ?? 0,
-    color: d.pct === null ? '#F0EEE8' : d.pct >= 90 ? '#D4F25A' : d.pct >= 60 ? '#FFEDA6' : '#FFD3DE',
+    color: d.pct === null ? '#EDF2F5' : d.pct >= 90 ? '#2DD4BF' : d.pct >= 60 ? '#FFEDA6' : '#FFD3DE',
   })), [data]);
 
   return (

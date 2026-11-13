@@ -11,7 +11,7 @@ React (Vite, Tailwind)  ──HTTPS/JSON──▶  Express API  ──▶  Mongo
    └─ public pages /e/:token, /s/:token     └──▶  node-cron (demo purge, 07:30 digest)
 ```
 
-`ml-service/` (Flask) is not wired into the product; it is kept for reference.
+`ml-service/` (Flask) is not wired into the product: its models were trained on randomly generated data, so predictions now come from validated clinical equations plus per-person statistical learning (see ArogyaPredict below).
 
 ## 2. Domain model
 
@@ -75,6 +75,7 @@ verified with `assertMembersOwned` before writes. IDs are validated before use.
 | `briefService` | Deterministic doctor brief from records; optional AI narrative layered on top. |
 | `assistantService` | Emergency phrase detection → call 112/108; otherwise Gemini grounded in a household snapshot; falls back to deterministic answers from records. |
 | `calendarService` | iCalendar feed (appointments with RRULE, vaccine due dates, daily medicine alarms in floating local time). |
+| `predictService` + `predict/*` | ArogyaPredict: `riskModels` (Framingham, heart age, CKD-EPI, ADA, metabolic syndrome — pure functions, verified against published worked examples), `forecast` (Theil–Sen trend, damped projection, crossing dates, anomaly z-scores), `adherencePatterns` (per-slot miss rates, Beta prior). Produces ranked insights and "data needs" that unlock more models; used by Today, brief and assistant. |
 | `demoService` | Seeds a realistic multi-generation household; purged after 24 h by the job runner. |
 
 ## 4. Important flows

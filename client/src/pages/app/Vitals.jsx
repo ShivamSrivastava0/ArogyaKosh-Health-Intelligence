@@ -13,6 +13,7 @@ import { useConfirm } from '../../components/ui/Overlay';
 import Button from '../../components/ui/Button';
 import DataTable from '../../components/ui/DataTable';
 import { Trend } from '../../components/charts/Charts';
+import { ForecastArt } from '../../components/illustrations';
 import { fmtDateTime, fmtShort, relDays, firstName, shiftKey, todayKey } from '../../lib/format';
 
 export const BANDS = {
@@ -59,7 +60,7 @@ export function VitalsPanel({ memberId, initialType }) {
   if (!withData.length) {
     return (
       <Card>
-        <Empty icon={LuActivity} title="No readings yet" body="Log BP, sugar, weight or lab values. We'll chart them, flag anything outside the normal range and include them in the doctor brief."
+        <Empty art={ForecastArt} title="No readings yet" body="Log BP, sugar, weight or lab values. ArogyaPredict charts them against normal ranges, learns the trend and forecasts where it's heading."
           action={<Button size="sm" icon={LuPlus} onClick={() => quick.open('vital', { member: memberId })}>Log first reading</Button>} />
       </Card>
     );
@@ -122,7 +123,7 @@ export default function Vitals() {
 
   return (
     <div>
-      <PageHeader title="Vitals & labs" subtitle="Track BP, sugar, weight and lab values. Out-of-range readings are flagged on Today."
+      <PageHeader title="Vitals & labs" subtitle="Every reading trains ArogyaPredict — out-of-range values are flagged and trends are forecast ahead."
         actions={<Button icon={LuPlus} onClick={() => quick.open('vital', { member: memberId })}>Log reading</Button>} />
       <div className="scrollbar-none -mx-4 mb-6 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         {members.map((m) => (

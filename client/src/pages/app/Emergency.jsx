@@ -14,6 +14,7 @@ import { ActionMenu, useConfirm } from '../../components/ui/Overlay';
 import { Switch } from '../../components/ui/Field';
 import Button from '../../components/ui/Button';
 import Logo from '../../components/ui/Logo';
+import { EmergencyArt } from '../../components/illustrations';
 import { firstName, daysFromNow, toInputDate } from '../../lib/format';
 
 const NEARBY = [
@@ -168,7 +169,7 @@ export default function Emergency() {
     <div>
       {printing && <div className="hidden print:block"><WalletCard member={printing} /><p className="mt-3 text-xs">Cut along the border and keep it in the wallet. Scan the QR to see current details.</p></div>}
       <div className="no-print">
-        <PageHeader title="Emergency" subtitle="When minutes matter: numbers, nearby help, and medical ID cards anyone can scan." />
+        <div className="relative"><EmergencyArt className="pointer-events-none absolute -top-6 right-0 hidden h-36 md:block" /><PageHeader title="Emergency" subtitle="When minutes matter: numbers, nearby help, and medical ID cards anyone can scan." /></div>
 
         <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <a href="tel:112" className="flex items-center gap-4 rounded-3xl bg-bad p-5 text-white transition-transform hover:-translate-y-0.5">

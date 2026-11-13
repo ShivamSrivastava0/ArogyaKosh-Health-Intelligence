@@ -6,6 +6,7 @@ import { latestVitals, isAbnormal } from './vitalService.js';
 import { adherence, scheduleText } from './medicineService.js';
 import { checkMedicines } from './safetyService.js';
 import { VITALS, formatVital } from '../data/vitals.js';
+import { predictMember } from './predictService.js';
 
 const MEAL = {
   BEFORE_FOOD: 'before food', AFTER_FOOD: 'after food', WITH_FOOD: 'with food',
@@ -35,6 +36,17 @@ export const buildBrief = async (member, { recordIds } = {}) => {
   ]);
 
   const adhByMed = new Map(adh.byMedicine.map((m) => [String(m._id), m.pct]));
+  const pred = await predictMember(member).catch(() => null);
+  const outlook = pred && {
+    cardio: pred.cardio.available ? { risk: pred.cardio.risk, band: pred.cardio.band, heartAge: pred.cardio.heartAge, model: pred.cardio.model } : null,
+    kidney: pred.kidney,
+    glycaemic: pred.glycaemic,
+    trends: pred.forecasts.filter((f) => f.confidence !== 'LOW').map((f) => ({
+      label: f.label, unit: f.unit, direction: f.direction, changePerMonth: f.changePerMonth, confidence: f.confidence,
+      projected: f.projected, crossing: f.crossing,
+    })),
+    patterns: pred.patterns.filter((p) => p.missRate >= 0.25).map((p) => ({ medicine: p.medicine.name, time: p.time, missRate: Math.round(p.missRate * 100) })),
+  };
   const vitals = Object.values(vitalsMap.get(String(member._id)) || {})
     .sort((a, b) => Object.keys(VITALS).indexOf(a.type) - Object.keys(VITALS).indexOf(b.type))
     .map((v) => ({
@@ -94,6 +106,7 @@ export const buildBrief = async (member, { recordIds } = {}) => {
     doctor: member.doctor,
     emergencyContacts: member.emergencyContacts,
     safety,
+    outlook,
     notes: member.notes,
   };
 };
@@ -109,6 +122,7 @@ export const briefToText = (b) => {
     `Lifestyle: ${Object.entries(b.lifestyle || {}).filter(([, v]) => v !== '' && v !== null).map(([k, v]) => `${k}=${v}`).join(', ') || 'n/a'}`,
     `Recent records: ${b.records.map((r) => `${r.title} (${new Date(r.date).toISOString().slice(0, 10)})${r.summary ? `: ${r.summary}` : ''}`).join('; ') || 'none'}`,
     `Pending vaccinations: ${b.vaccinations.pending.map((v) => `${v.name} ${v.dose}`).join(', ') || 'none'}`,
+    `Predicted outlook: ${b.outlook?.cardio ? `10-yr CVD risk ${b.outlook.cardio.risk}% (${b.outlook.cardio.band}), heart age ${b.outlook.cardio.heartAge}; ` : ''}${(b.outlook?.trends || []).map((t) => `${t.label} ${t.direction.toLowerCase()} ${t.changePerMonth}/mo`).join('; ') || 'no trends'}`,
   ];
   return lines.join('\n');
 };

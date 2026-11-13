@@ -3,8 +3,8 @@ import clsx from 'clsx';
 export function LogoMark({ className = 'h-8 w-8' }) {
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden>
-      <rect width="64" height="64" rx="18" fill="#121212" />
-      <path d="M17 34h8l5-11 7 20 5-9h8" fill="none" stroke="#D4F25A" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+      <rect width="64" height="64" rx="18" fill="#0B2239" />
+      <path d="M17 34h8l5-11 7 20 5-9h8" fill="none" stroke="#2DD4BF" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

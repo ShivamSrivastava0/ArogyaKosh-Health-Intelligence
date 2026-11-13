@@ -19,9 +19,9 @@ const tree = (
           position="bottom-center"
           toastOptions={{
             duration: 3500,
-            style: { background: '#121212', color: '#fff', borderRadius: '999px', fontSize: '14px', padding: '10px 16px' },
-            success: { iconTheme: { primary: '#D4F25A', secondary: '#121212' } },
-            error: { iconTheme: { primary: '#FF8A7A', secondary: '#121212' } },
+            style: { background: '#0B2239', color: '#fff', borderRadius: '999px', fontSize: '14px', padding: '10px 16px' },
+            success: { iconTheme: { primary: '#2DD4BF', secondary: '#0B2239' } },
+            error: { iconTheme: { primary: '#FF8A7A', secondary: '#0B2239' } },
           }}
         />
       </ConfirmProvider>

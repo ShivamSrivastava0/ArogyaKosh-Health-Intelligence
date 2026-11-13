@@ -1,16 +1,27 @@
 # ArogyaKosh
 
-**Family health, organised.** One place for the medicines, reports, vaccines and
-emergency information of everyone you look after — your parents, your kids and you.
+**Predictive health for your whole family.** ArogyaKosh sees health problems
+coming — heart age and 10-year risk, BP and sugar forecasts, missed-dose
+patterns — for your parents, your kids and you, then turns every prediction into
+a reminder, a refill, a checkup or a brief for the doctor.
 
-ArogyaKosh is built for the person who keeps a family's health together: it
-reminds, forecasts, flags and shares, instead of just storing PDFs.
+## ArogyaPredict — the prediction engine
+
+| Model | What it tells you | Basis |
+|---|---|---|
+| Heart & stroke risk, heart age | 10-year cardiovascular risk and the "age" of the heart, with the biggest levers and a live what-if simulator | Framingham CVD (D'Agostino 2008), lipid and BMI versions |
+| Trend forecasts | Where BP, sugar, weight and lab values are heading 3–6 months out, and when they'll cross into an unhealthy range | Robust Theil–Sen trends on each person's own readings, damped projections with uncertainty bands |
+| Unusual readings | A reading far from that person's own baseline | Robust z-score (median/MAD) |
+| Learned habits | Which doses each person tends to miss (e.g. weekend evenings) and tonight's at-risk doses | Per-slot miss rates with Bayesian smoothing |
+| Sugar, kidney, metabolic | Prediabetes / control status, chance of developing diabetes (family history read from the household), eGFR stage, metabolic syndrome | ADA thresholds, Indian Diabetes Risk Score, CKD-EPI 2021, harmonised criteria |
+
+Predictions appear on Today, on every member profile, in the doctor brief and in Ask Kosh. They are estimates, never a diagnosis.
 
 ## What it does
 
 | | |
 |---|---|
-| **Today** | Every dose for every family member on one screen. One tap to mark taken; stock counts down; refill, expiry, overdue-checkup, abnormal-reading and insurance-renewal alerts. |
+| **Today** | Top predictions and heart ages for the household, then every dose for every family member on one screen. One tap to mark taken; stock counts down; refill, expiry, overdue-checkup, abnormal-reading and insurance-renewal alerts. |
 | **Medicines** | Schedules (times, weekdays, meal timing), stock forecasting ("runs out in 4 days"), refills, adherence analytics, and an interaction / allergy / duplicate-ingredient check that understands Indian brand names. |
 | **Vitals & labs** | BP, sugar, HbA1c, lipids, thyroid, Hb, vitamin D and more — charted against normal ranges, with trends and flags. |
 | **Health locker** | Upload prescriptions, reports, scans and bills. Search, preview, download. Optional AI reading turns lab PDFs into charted values after you confirm them. |

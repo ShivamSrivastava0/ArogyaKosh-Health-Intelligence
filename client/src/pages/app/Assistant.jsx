@@ -33,7 +33,8 @@ export default function Assistant() {
   const parent = members.find((m) => ['FATHER', 'MOTHER'].includes(m.relation));
   const suggestions = [
     parent ? `What medicines does ${firstName(parent.name)} take?` : 'What medicines am I taking?',
-    'When is the next appointment?',
+    parent ? `What is ${firstName(parent.name)}'s heart age and risk?` : 'What is my heart age?',
+    'Whose health is trending the wrong way?',
     parent ? `What was ${firstName(parent.name)}'s latest BP?` : 'What was my latest BP?',
     'Which vaccines are due?',
     'Any medicines running low?',
@@ -59,7 +60,7 @@ export default function Assistant() {
 
   return (
     <div className="flex min-h-[calc(100dvh-9rem)] flex-col">
-      <PageHeader title="Ask Kosh" subtitle="Questions about your family's medicines, readings, appointments and vaccines — answered from your own records."
+      <PageHeader title="Ask Kosh" subtitle="Ask about risks, forecasts, medicines, readings and appointments — answered from your family's records and ArogyaPredict."
         actions={messages.length > 0 && <Button variant="secondary" size="sm" icon={LuRotateCcw} onClick={() => setMessages([])}>New chat</Button>} />
 
       <div className="flex-1 space-y-5 pb-6">

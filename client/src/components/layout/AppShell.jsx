@@ -21,6 +21,7 @@ function NavItem({ item, onClick }) {
         <>
           <item.icon className={clsx('h-[18px] w-[18px]', isActive ? 'text-lime' : 'text-ink-3 group-hover:text-ink')} />
           {item.label}
+          {item.badge && <span className={clsx('ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold tracking-wide', isActive ? 'bg-lime text-ink' : 'bg-brand-100 text-brand')}>{item.badge}</span>}
         </>
       )}
     </NavLink>

@@ -24,6 +24,7 @@ const memberSchema = new Schema(
     bloodGroup: opt(BLOOD_GROUPS),
     heightCm: { type: Number, min: 30, max: 260, default: null },
     weightKg: { type: Number, min: 1, max: 400, default: null },
+    waistCm: { type: Number, min: 30, max: 250, default: null },
     phone: { type: String, trim: true, default: '' },
 
     allergies: [{ name: { type: String, required: true, trim: true }, severity: { type: String, enum: SEVERITIES, default: 'MODERATE' }, reaction: { type: String, trim: true, default: '' } }],

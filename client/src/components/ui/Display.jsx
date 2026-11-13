@@ -75,10 +75,11 @@ export function MemberChip({ member, className }) {
   );
 }
 
-export function Empty({ icon: Icon, title, body, action, className, compact }) {
+export function Empty({ icon: Icon, art: Art, title, body, action, className, compact }) {
   return (
     <div className={clsx('flex flex-col items-center justify-center text-center', compact ? 'px-4 py-8' : 'px-6 py-14', className)}>
-      {Icon && (
+      {Art && <Art className={clsx('mb-4', compact ? 'h-24' : 'h-32')} />}
+      {Icon && !Art && (
         <span className="mb-4 grid h-12 w-12 place-items-center rounded-2xl border border-line bg-paper">
           <Icon className="h-5 w-5 text-ink-2" />
         </span>
@@ -141,11 +142,11 @@ export function ScoreRing({ value, size = 88, stroke = 8, label, className, tone
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const v = value ?? 0;
-  const color = tone || (value === null || value === undefined ? '#E7E5DE' : v >= 80 ? '#1E8E4E' : v >= 60 ? '#B86E00' : '#D0372A');
+  const color = tone || (value === null || value === undefined ? '#E1E8EE' : v >= 80 ? '#1E8E4E' : v >= 60 ? '#B86E00' : '#D0372A');
   return (
     <div className={clsx('relative inline-grid place-items-center', className)} style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} stroke="#F0EEE8" strokeWidth={stroke} fill="none" />
+        <circle cx={size / 2} cy={size / 2} r={r} stroke="#EDF2F5" strokeWidth={stroke} fill="none" />
         <circle cx={size / 2} cy={size / 2} r={r} stroke={color} strokeWidth={stroke} fill="none" strokeLinecap="round"
           strokeDasharray={c} strokeDashoffset={c - (c * v) / 100} style={{ transition: 'stroke-dashoffset .6s ease' }} />
       </svg>

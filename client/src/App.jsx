@@ -14,6 +14,7 @@ const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
 const VerifyEmail = lazy(() => import('./pages/auth/VerifyEmail'));
 const Today = lazy(() => import('./pages/app/Today'));
+const Predict = lazy(() => import('./pages/app/Predict'));
 const Family = lazy(() => import('./pages/app/Family'));
 const MemberDetail = lazy(() => import('./pages/app/MemberDetail'));
 const Brief = lazy(() => import('./pages/app/Brief'));
@@ -73,6 +74,7 @@ export default function App() {
         <Route path="/app" element={<RequireAuth />}>
           <Route element={<Suspense fallback={<PageSkeleton />}><Outlet /></Suspense>}>
             <Route index element={<Today />} />
+            <Route path="predict" element={<Predict />} />
             <Route path="family" element={<Family />} />
             <Route path="family/:id" element={<MemberDetail />} />
             <Route path="family/:id/brief" element={<Brief />} />

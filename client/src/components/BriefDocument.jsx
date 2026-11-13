@@ -55,6 +55,33 @@ export default function BriefDocument({ brief, fileUrl }) {
         </Section>
       </div>
 
+      {brief.outlook && (brief.outlook.cardio || brief.outlook.trends?.length > 0 || brief.outlook.kidney || brief.outlook.glycaemic) && (
+        <Section title="Predicted outlook · ArogyaPredict">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {brief.outlook.cardio && (
+              <div className="rounded-2xl bg-paper p-3 text-sm">
+                <p className="text-xs text-ink-3">10-yr CVD risk (Framingham)</p>
+                <p className="tnum font-display text-xl font-semibold">{brief.outlook.cardio.risk}% <span className="font-sans text-xs font-normal text-ink-3">· heart age {brief.outlook.cardio.heartAge >= 80 ? '80+' : brief.outlook.cardio.heartAge}</span></p>
+              </div>
+            )}
+            {brief.outlook.kidney && (
+              <div className="rounded-2xl bg-paper p-3 text-sm"><p className="text-xs text-ink-3">eGFR (CKD-EPI 2021)</p><p className="tnum font-display text-xl font-semibold">{brief.outlook.kidney.egfr} <span className="font-sans text-xs font-normal text-ink-3">· {brief.outlook.kidney.stage}</span></p></div>
+            )}
+            {brief.outlook.glycaemic && (
+              <div className="rounded-2xl bg-paper p-3 text-sm"><p className="text-xs text-ink-3">Glycaemic status</p><p className="font-semibold">{brief.outlook.glycaemic.label}</p></div>
+            )}
+          </div>
+          {brief.outlook.trends?.length > 0 && (
+            <ul className="mt-3 space-y-1 text-sm">
+              {brief.outlook.trends.map((t) => (
+                <li key={t.label}><b>{t.label}</b> — {t.direction.toLowerCase()} {t.changePerMonth > 0 ? '+' : ''}{t.changePerMonth} {t.unit}/month ({t.confidence.toLowerCase()} confidence){t.crossing ? `; projected ${t.crossing.status.toLowerCase()} by ${fmtDate(t.crossing.date)}` : ''}</li>
+              ))}
+            </ul>
+          )}
+          {brief.outlook.patterns?.length > 0 && <p className="mt-2 text-sm text-ink-2"><b>Adherence pattern:</b> {brief.outlook.patterns.map((p) => `${p.medicine} at ${p.time} missed ${p.missRate}%`).join('; ')}</p>}
+        </Section>
+      )}
+
       <Section title={`Current medicines${brief.adherence !== null && brief.adherence !== undefined ? ` · ${brief.adherence}% adherence (30 days)` : ''}`}>
         {brief.medicines.length ? (
           <table className="w-full text-left text-sm">

@@ -15,6 +15,7 @@ import { Checkbox } from '../../components/ui/Field';
 import Button, { Spinner } from '../../components/ui/Button';
 import DataTable from '../../components/ui/DataTable';
 import { MemberFilter } from './Medicines';
+import { LabArt } from '../../components/illustrations';
 import { RECORD_CATEGORIES } from '../../lib/constants';
 import { fmtDate, bytes } from '../../lib/format';
 
@@ -161,7 +162,7 @@ export function RecordList({ member, category, q, view = 'grid' }) {
   const current = open ? items.find((r) => r._id === open) : null;
 
   const empty = (
-    <Card><Empty icon={LuFileText} title={q || category ? 'No matching records' : 'Your health locker is empty'}
+    <Card><Empty art={LabArt} title={q || category ? 'No matching records' : 'Your health locker is empty'}
       body={q || category ? 'Try a different search or filter.' : 'Upload prescriptions, lab reports, scans and bills. Find any of them in seconds — even years later.'}
       action={!q && <Button size="sm" icon={LuPlus} onClick={() => quick.open('record', { member })}>Upload a record</Button>} /></Card>
   );

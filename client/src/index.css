@@ -8,9 +8,9 @@
     @apply bg-paper text-ink font-sans antialiased;
     font-feature-settings: 'ss01', 'cv11';
   }
-  ::selection { background: #d4f25a; color: #121212; }
+  ::selection { background: #2dd4bf; color: #0B2239; }
   h1, h2, h3 { @apply font-display tracking-tight; }
-  :focus-visible { outline: 2px solid #121212; outline-offset: 2px; border-radius: 6px; }
+  :focus-visible { outline: 2px solid #0B2239; outline-offset: 2px; border-radius: 6px; }
   input[type='number']::-webkit-inner-spin-button { opacity: 0.4; }
   .tnum { font-variant-numeric: tabular-nums; }
 }
@@ -20,7 +20,7 @@
   .label { @apply block text-[13px] font-medium text-ink-2 mb-1.5; }
   .input {
     @apply w-full h-11 rounded-xl border border-line bg-surface px-3.5 text-[15px] text-ink placeholder:text-ink-4
-      transition-colors hover:border-ink-4 focus:outline-none focus:border-ink focus:ring-4 focus:ring-lime/50
+      transition-colors hover:border-ink-4 focus:outline-none focus:border-ink focus:ring-4 focus:ring-lime/35
       disabled:bg-paper disabled:text-ink-3;
   }
   .input-error { @apply border-bad focus:border-bad focus:ring-bad/15; }
@@ -29,10 +29,10 @@
   .scrollbar-none { scrollbar-width: none; }
   .scrollbar-none::-webkit-scrollbar { display: none; }
   .bg-grid {
-    background-image: linear-gradient(#e7e5de 1px, transparent 1px), linear-gradient(90deg, #e7e5de 1px, transparent 1px);
+    background-image: linear-gradient(#e1e8ee 1px, transparent 1px), linear-gradient(90deg, #e1e8ee 1px, transparent 1px);
     background-size: 44px 44px;
   }
-  .bg-dots { background-image: radial-gradient(#d9d7cf 1px, transparent 1px); background-size: 18px 18px; }
+  .bg-dots { background-image: radial-gradient(#cbd8e2 1px, transparent 1px); background-size: 18px 18px; }
 }
 
 @media print {

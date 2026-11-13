@@ -48,14 +48,14 @@ export const createDemoAccount = async () => {
   const [self, spouse, father, mother, daughter] = await Member.create([
     {
       owner, isSelf: true, name: 'Aarav Sharma', relation: 'SELF', dob: yearsAgo(34, 40), gender: 'MALE', bloodGroup: 'B+',
-      heightCm: 176, weightKg: 79, phone: '+91 98200 11223', noKnownAllergies: true, color: 'lime',
+      heightCm: 176, weightKg: 79, waistCm: 94, phone: '+91 98200 11223', noKnownAllergies: true, color: 'lime',
       lifestyle: { smoking: 'NEVER', alcohol: 'OCCASIONAL', activity: 'LIGHT', diet: 'EGGETARIAN', sleepHours: 6.5 },
       doctor: { name: 'Dr. Kavita Rao', specialty: 'General Physician', phone: '+91 20 2567 8899', clinic: 'Rao Family Clinic, Baner' },
       insurance: [{ provider: 'HDFC ERGO Optima Secure', policyNumber: 'HE-55102931', sumInsured: 1000000, validTill: ahead(210), helpline: '1800 2666 400' }],
       emergencyContacts: [{ name: 'Meera Sharma', relation: 'Wife', phone: '+91 98200 44556' }],
     },
     {
-      owner, name: 'Meera Sharma', relation: 'SPOUSE', dob: yearsAgo(31, 120), gender: 'FEMALE', bloodGroup: 'O+', heightCm: 162, weightKg: 58, color: 'peach',
+      owner, name: 'Meera Sharma', relation: 'SPOUSE', dob: yearsAgo(31, 120), gender: 'FEMALE', bloodGroup: 'O+', heightCm: 162, weightKg: 58, waistCm: 76, color: 'peach',
       allergies: [{ name: 'Penicillin', severity: 'SEVERE', reaction: 'Hives, throat swelling' }],
       lifestyle: { smoking: 'NEVER', alcohol: 'NEVER', activity: 'MODERATE', diet: 'VEGETARIAN', sleepHours: 7 },
       doctor: { name: 'Dr. Kavita Rao', specialty: 'General Physician', phone: '+91 20 2567 8899' },
@@ -63,7 +63,7 @@ export const createDemoAccount = async () => {
       emergencyContacts: [{ name: 'Aarav Sharma', relation: 'Husband', phone: '+91 98200 11223' }],
     },
     {
-      owner, name: 'Rajesh Sharma', relation: 'FATHER', dob: yearsAgo(66, 200), gender: 'MALE', bloodGroup: 'B+', heightCm: 170, weightKg: 81, color: 'sky',
+      owner, name: 'Rajesh Sharma', relation: 'FATHER', dob: yearsAgo(66, 200), gender: 'MALE', bloodGroup: 'B+', heightCm: 170, weightKg: 81, waistCm: 101, color: 'sky',
       noKnownAllergies: true,
       conditions: [{ name: 'Type 2 diabetes', since: yearsAgo(9), status: 'MANAGED' }, { name: 'Hypertension', since: yearsAgo(6), status: 'ACTIVE' }],
       lifestyle: { smoking: 'FORMER', alcohol: 'NEVER', activity: 'LIGHT', diet: 'VEGETARIAN', sleepHours: 6 },
@@ -73,7 +73,7 @@ export const createDemoAccount = async () => {
       notes: 'Uses a walking stick on stairs. Prefers Hindi.',
     },
     {
-      owner, name: 'Sunita Sharma', relation: 'MOTHER', dob: yearsAgo(61, 30), gender: 'FEMALE', bloodGroup: 'A+', heightCm: 155, weightKg: 64, color: 'lilac',
+      owner, name: 'Sunita Sharma', relation: 'MOTHER', dob: yearsAgo(61, 30), gender: 'FEMALE', bloodGroup: 'A+', heightCm: 155, weightKg: 64, waistCm: 86, color: 'lilac',
       allergies: [{ name: 'Sulfa drugs', severity: 'MODERATE', reaction: 'Skin rash' }],
       conditions: [{ name: 'Hypothyroidism', since: yearsAgo(12), status: 'MANAGED' }],
       lifestyle: { smoking: 'NEVER', alcohol: 'NEVER', activity: 'MODERATE', diet: 'VEGETARIAN', sleepHours: 7.5 },
@@ -111,7 +111,10 @@ export const createDemoAccount = async () => {
         if (key === nowKey && t > nowHm) continue;
         if (key === nowKey && rand() < 0.5) continue;
         const r = rand();
-        const takenRate = med.member.equals(father._id) ? 0.84 : 0.93;
+        // Papa's evening Glycomet is the realistic weak spot: often forgotten, worst on weekends.
+        const weekend = [0, 6].includes(day.getDay());
+        const eveningGlycomet = med.name === 'Glycomet' && t === '20:30';
+        const takenRate = eveningGlycomet ? (weekend ? 0.4 : 0.68) : med.member.equals(father._id) ? 0.9 : 0.94;
         if (r < takenRate) logs.push({ owner, member: med.member, medicine: med._id, date: key, time: t, status: 'TAKEN' });
         else if (r < takenRate + 0.04) logs.push({ owner, member: med.member, medicine: med._id, date: key, time: t, status: 'SKIPPED' });
       }
@@ -133,16 +136,21 @@ export const createDemoAccount = async () => {
     { owner, member: father._id, type: 'LDL', value: 128, at: ago(12) },
     { owner, member: father._id, type: 'CHOLESTEROL_TOTAL', value: 212, at: ago(12) },
     { owner, member: father._id, type: 'CREATININE', value: 1.1, at: ago(12) },
+    { owner, member: father._id, type: 'HDL', value: 38, at: ago(12) },
+    { owner, member: father._id, type: 'TRIGLYCERIDES', value: 182, at: ago(12) },
+    { owner, member: mother._id, type: 'TSH', value: 6.4, at: ago(330) },
+    { owner, member: mother._id, type: 'TSH', value: 4.6, at: ago(90) },
     { owner, member: mother._id, type: 'TSH', value: 5.2, at: ago(150) },
     { owner, member: mother._id, type: 'TSH', value: 3.1, at: ago(20) },
     { owner, member: mother._id, type: 'BP', value: 124, value2: 80, at: ago(6) },
     { owner, member: mother._id, type: 'VITAMIN_D', value: 24, at: ago(20) },
     { owner, member: self._id, type: 'BP', value: 118, value2: 78, at: ago(30) },
     { owner, member: self._id, type: 'BP', value: 122, value2: 79, at: ago(4) },
-    { owner, member: self._id, type: 'WEIGHT', value: 80.4, at: ago(60) },
-    { owner, member: self._id, type: 'WEIGHT', value: 79.1, at: ago(3) },
+    ...[[175, 76.2], [140, 77.0], [110, 77.6], [80, 78.3], [50, 78.9], [20, 79.4], [3, 79.8]].map(([d, v]) => ({ owner, member: self._id, type: 'WEIGHT', value: v, at: ago(d, 7, 15) })),
+    ...[[170, 91], [140, 93], [112, 95], [84, 97], [56, 99], [28, 101], [6, 103]].map(([d, v]) => ({ owner, member: self._id, type: 'SUGAR_FASTING', value: v, at: ago(d, 7, 40) })),
+    { owner, member: self._id, type: 'HDL', value: 42, at: ago(120) },
+    { owner, member: self._id, type: 'CHOLESTEROL_TOTAL', value: 196, at: ago(120) },
     { owner, member: self._id, type: 'VITAMIN_D', value: 17, at: ago(55) },
-    { owner, member: self._id, type: 'SUGAR_FASTING', value: 94, at: ago(120) },
     { owner, member: self._id, type: 'LDL', value: 112, at: ago(120) },
     { owner, member: spouse._id, type: 'HEMOGLOBIN', value: 10.8, at: ago(62) },
     { owner, member: spouse._id, type: 'HEMOGLOBIN', value: 11.9, at: ago(8) },

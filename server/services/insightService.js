@@ -8,6 +8,7 @@ import { adherence, dosesForDay, stockInfo } from './medicineService.js';
 import { checkMedicines } from './safetyService.js';
 import { healthScore, readiness } from './scoreService.js';
 import { memberLite } from './memberService.js';
+import { predictHousehold } from './predictService.js';
 import { VITALS, formatVital } from '../data/vitals.js';
 import { addDays, daysBetween, toDateKey } from '../utils/helpers.js';
 
@@ -155,6 +156,19 @@ export const todayFeed = async (user, dateKey) => {
 
   const taken = doses.filter((d) => d.status === 'TAKEN').length;
 
+  // ArogyaPredict: top forward-looking insights + doses likely to be missed.
+  let predictions = { insights: [], members: [] };
+  try {
+    predictions = await predictHousehold(ownerId);
+    const risk = new Map(predictions.dosesAtRisk.map((d) => [`${d.medicine._id}|${d.time}`, d.missToday]));
+    for (const d of doses) {
+      const p = risk.get(`${d.medicine._id}|${d.time}`);
+      if (p && d.status === 'PENDING') d.missRisk = Math.round(p * 100);
+    }
+  } catch (err) {
+    console.error('[predict] household failed:', err.message);
+  }
+
   return {
     date: dateKey,
     members: members.map((m) => ({ ...memberLite(m), age: m.age })),
@@ -164,6 +178,10 @@ export const todayFeed = async (user, dateKey) => {
     upcoming,
     readiness: { score: ready.score, done: ready.done, total: ready.total, next: ready.items.filter((i) => !i.done).slice(0, 4) },
     adherence: { pct: adh.pct, byDay: adh.byDay },
+    predictions: {
+      insights: predictions.insights.slice(0, 5),
+      radar: predictions.members,
+    },
   };
 };
 

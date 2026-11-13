@@ -19,7 +19,7 @@ import { generateSchedule } from '../services/vaccineService.js';
 import { removeUpload } from '../middleware/upload.js';
 
 const FIELDS = [
-  'name', 'relation', 'dob', 'gender', 'bloodGroup', 'heightCm', 'weightKg', 'phone',
+  'name', 'relation', 'dob', 'gender', 'bloodGroup', 'heightCm', 'weightKg', 'waistCm', 'phone',
   'allergies', 'noKnownAllergies', 'conditions', 'emergencyContacts', 'doctor', 'insurance',
   'lifestyle', 'organDonor', 'notes', 'color', 'emergencyEnabled',
 ];

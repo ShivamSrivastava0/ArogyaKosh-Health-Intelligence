@@ -18,6 +18,7 @@ import * as expenses from '../controllers/expenseController.js';
 import * as insights from '../controllers/insightController.js';
 import * as share from '../controllers/shareController.js';
 import * as pub from '../controllers/publicController.js';
+import * as predict from '../controllers/predictController.js';
 
 const router = Router();
 
@@ -62,6 +63,10 @@ router.use(authenticate);
 router.get('/today', insights.today);
 router.get('/scores', insights.scores);
 router.get('/readiness', insights.readiness);
+
+router.get('/predict', predict.household);
+router.get('/predict/:id', predict.member);
+router.post('/predict/:id/simulate', limiter(120), predict.simulate);
 router.post('/assistant', limiter(60), insights.assistant);
 router.get('/kit', insights.kit);
 router.put('/kit', insights.updateKit);

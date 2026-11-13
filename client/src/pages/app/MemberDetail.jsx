@@ -4,8 +4,9 @@ import clsx from 'clsx';
 import toast from 'react-hot-toast';
 import {
   LuPencil, LuClipboardList, LuQrCode, LuTrash2, LuPhone, LuShieldCheck, LuStethoscope, LuTriangleAlert, LuHeartPulse,
-  LuPlus, LuChevronRight, LuInfo,
+  LuPlus, LuChevronRight, LuInfo, LuBrainCircuit,
 } from 'react-icons/lu';
+import InsightList from '../../components/predict/Insights';
 import { useApi, invalidate } from '../../hooks/useApi';
 import { api, errorMessage } from '../../api/client';
 import { useQuickAdd } from '../../context/QuickAddContext';
@@ -93,6 +94,30 @@ function DiabetesRisk({ member }) {
   );
 }
 
+function OutlookCard({ member }) {
+  const { data: r } = useApi(`/predict/${member._id}`);
+  if (!r) return <Card className="h-48 animate-pulse" />;
+  const c = r.cardio;
+  const tone = c.available ? { LOW: 'text-ok', MODERATE: 'text-warn', HIGH: 'text-bad' }[c.band] : '';
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex items-center justify-between gap-3 bg-ink px-5 py-4 text-white">
+        <p className="flex items-center gap-2 text-sm font-semibold"><LuBrainCircuit className="h-4 w-4 text-lime" />ArogyaPredict outlook</p>
+        <Link to={`/app/predict?member=${member._id}`} className="flex items-center gap-1 text-xs font-medium text-white/70 hover:text-white">Full forecast <LuChevronRight className="h-3.5 w-3.5" /></Link>
+      </div>
+      <div className="grid grid-cols-3 divide-x divide-line-soft border-b border-line-soft text-center">
+        <div className="p-4"><p className="text-xs text-ink-3">Heart age</p><p className="tnum font-display text-2xl font-semibold">{c.available ? (c.heartAge >= 80 ? '80+' : c.heartAge) : '—'}</p></div>
+        <div className="p-4"><p className="text-xs text-ink-3">10-yr risk</p><p className={clsx('tnum font-display text-2xl font-semibold', tone)}>{c.available ? `${c.risk}%` : '—'}</p></div>
+        <div className="p-4"><p className="text-xs text-ink-3">Trends</p><p className="tnum font-display text-2xl font-semibold">{r.forecasts.length}</p></div>
+      </div>
+      <div className="p-2">
+        {r.insights.length ? <InsightList insights={r.insights.slice(0, 3)} compact />
+          : <p className="px-3 py-3 text-sm text-ink-3">{r.dataNeeds.length ? `Add ${r.dataNeeds[0].label.toLowerCase().replace(/^add |^log /, '')} to unlock ${r.dataNeeds[0].unlocks}.` : 'Nothing to flag right now.'}</p>}
+      </div>
+    </Card>
+  );
+}
+
 function Overview({ member }) {
   const quick = useQuickAdd();
   const edit = (section) => quick.open('member', { memberDoc: member, section });
@@ -100,6 +125,7 @@ function Overview({ member }) {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
       <div className="space-y-6">
+        <OutlookCard member={member} />
         <ScoreCard memberId={member._id} />
         {adultNoDiabetes && <DiabetesRisk member={member} />}
       </div>
@@ -218,6 +244,7 @@ export default function MemberDetail() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" icon={LuQrCode} to={`/app/emergency?member=${member._id}`}>Emergency card</Button>
+          <Button variant="secondary" icon={LuBrainCircuit} to={`/app/predict?member=${member._id}`}>Predictions</Button>
           <Button icon={LuClipboardList} to={`/app/family/${member._id}/brief`}>Doctor brief</Button>
           <ActionMenu items={[
             { label: 'Edit profile', icon: LuPencil, onClick: () => quick.open('member', { memberDoc: member, section: 'basics' }) },
