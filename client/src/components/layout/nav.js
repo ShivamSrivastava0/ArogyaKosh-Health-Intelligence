@@ -1,10 +1,11 @@
 import {
-  LuHouse, LuUsers, LuPill, LuActivity, LuFileText, LuCalendarDays, LuSyringe, LuWallet, LuSiren, LuSparkles, LuSettings,
+  LuHouse, LuUsers, LuPill, LuActivity, LuFileText, LuCalendarDays, LuSyringe, LuWallet, LuSiren, LuSparkles, LuSettings, LuBrainCircuit, LuHandHeart,
 } from 'react-icons/lu';
 
 export const NAV = [
   { group: 'Daily', items: [
     { to: '/app', label: 'Today', icon: LuHouse, end: true },
+    { to: '/app/predict', label: 'ArogyaPredict', short: 'Predict', icon: LuBrainCircuit, badge: 'AI' },
     { to: '/app/medicines', label: 'Medicines', icon: LuPill },
     { to: '/app/appointments', label: 'Appointments', icon: LuCalendarDays },
   ] },
@@ -15,6 +16,7 @@ export const NAV = [
     { to: '/app/vaccines', label: 'Vaccines', icon: LuSyringe },
   ] },
   { group: 'Plan', items: [
+    { to: '/app/circle', label: 'Care Circle', icon: LuHandHeart },
     { to: '/app/emergency', label: 'Emergency', icon: LuSiren },
     { to: '/app/expenses', label: 'Expenses', icon: LuWallet },
     { to: '/app/assistant', label: 'Ask Kosh', icon: LuSparkles },
@@ -23,4 +25,4 @@ export const NAV = [
 
 export const SETTINGS = { to: '/app/settings', label: 'Settings', icon: LuSettings };
 export const ALL_NAV = [...NAV.flatMap((g) => g.items), SETTINGS];
-export const MOBILE_TABS = ['/app', '/app/medicines', '/app/family', '/app/records'];
+export const MOBILE_TABS = ['/app', '/app/predict', '/app/medicines', '/app/family'];

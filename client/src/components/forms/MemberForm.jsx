@@ -22,7 +22,7 @@ const SECTIONS = [
 const TINT = { lime: 'bg-tint-lime', sky: 'bg-tint-sky', peach: 'bg-tint-peach', lilac: 'bg-tint-lilac', mint: 'bg-tint-mint', sun: 'bg-tint-sun', rose: 'bg-tint-rose', sand: 'bg-tint-sand' };
 
 const blank = () => ({
-  name: '', relation: 'FATHER', dob: '', gender: '', bloodGroup: '', heightCm: '', weightKg: '', phone: '', color: '',
+  name: '', relation: 'FATHER', dob: '', gender: '', bloodGroup: '', heightCm: '', weightKg: '', waistCm: '', phone: '', color: '',
   allergies: [], noKnownAllergies: false, conditions: [], emergencyContacts: [],
   doctor: { name: '', specialty: '', phone: '', clinic: '' }, insurance: [],
   lifestyle: { smoking: '', alcohol: '', activity: '', diet: '', sleepHours: '' }, organDonor: false, notes: '',
@@ -32,7 +32,7 @@ const fromMember = (m) => ({
   ...blank(),
   ...m,
   dob: toInputDate(m.dob),
-  heightCm: m.heightCm ?? '', weightKg: m.weightKg ?? '',
+  heightCm: m.heightCm ?? '', weightKg: m.weightKg ?? '', waistCm: m.waistCm ?? '',
   doctor: { ...blank().doctor, ...(m.doctor || {}) },
   lifestyle: { ...blank().lifestyle, ...(m.lifestyle || {}), sleepHours: m.lifestyle?.sleepHours ?? '' },
   conditions: (m.conditions || []).map((c) => ({ ...c, since: toInputDate(c.since) })),
@@ -72,7 +72,7 @@ export default function MemberForm({ open, onClose, member, section = 'basics', 
   const save = () => submit(async (s) => {
     const body = {
       name: s.name.trim(), dob: s.dob || null, gender: s.gender, bloodGroup: s.bloodGroup,
-      heightCm: num(s.heightCm), weightKg: num(s.weightKg), phone: s.phone,
+      heightCm: num(s.heightCm), weightKg: num(s.weightKg), waistCm: num(s.waistCm), phone: s.phone,
       allergies: s.allergies.filter((a) => a.name?.trim()), noKnownAllergies: s.noKnownAllergies && !s.allergies.length,
       conditions: s.conditions.filter((c) => c.name?.trim()).map((c) => ({ ...c, since: c.since || null })),
       emergencyContacts: s.emergencyContacts.filter((c) => c.name?.trim() && c.phone?.trim()),
@@ -111,9 +111,10 @@ export default function MemberForm({ open, onClose, member, section = 'basics', 
             <Select label="Gender" value={v.gender} onChange={set('gender')} options={GENDERS} placeholder="Select" />
             <Select label="Blood group" value={v.bloodGroup} onChange={set('bloodGroup')} options={BLOOD_GROUPS} placeholder="Unknown" />
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-4">
             <Input label="Height" type="number" value={v.heightCm} onChange={set('heightCm')} suffix="cm" />
             <Input label="Weight" type="number" step="0.1" value={v.weightKg} onChange={set('weightKg')} suffix="kg" />
+            <Input label="Waist" optional type="number" value={v.waistCm} onChange={set('waistCm')} suffix="cm" hint="At the navel. Powers diabetes risk." />
             <Input label="Phone" optional type="tel" value={v.phone} onChange={set('phone')} />
           </div>
           <Field label="Colour">

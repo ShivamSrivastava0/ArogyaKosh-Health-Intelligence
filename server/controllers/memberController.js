@@ -17,48 +17,50 @@ import { buildBrief, briefToText } from '../services/briefService.js';
 import { generate, isAiEnabled, SAFETY_RULES } from '../services/aiService.js';
 import { generateSchedule } from '../services/vaccineService.js';
 import { removeUpload } from '../middleware/upload.js';
+import { logActivity } from '../services/circleService.js';
 
 const FIELDS = [
-  'name', 'relation', 'dob', 'gender', 'bloodGroup', 'heightCm', 'weightKg', 'phone',
+  'name', 'relation', 'dob', 'gender', 'bloodGroup', 'heightCm', 'weightKg', 'waistCm', 'phone',
   'allergies', 'noKnownAllergies', 'conditions', 'emergencyContacts', 'doctor', 'insurance',
   'lifestyle', 'organDonor', 'notes', 'color', 'emergencyEnabled',
 ];
 
 export const listMembers = asyncHandler(async (req, res) => {
-  const members = await Member.find({ owner: req.user._id }).sort({ isSelf: -1, createdAt: 1 });
+  const members = await Member.find({ owner: req.ownerId }).sort({ isSelf: -1, createdAt: 1 });
   const [medCounts, scores] = await Promise.all([
-    Medicine.aggregate([{ $match: { owner: req.user._id, active: true } }, { $group: { _id: '$member', n: { $sum: 1 } } }]),
-    req.query.withScores ? scoresFor(req.user._id, members) : {},
+    Medicine.aggregate([{ $match: { owner: req.ownerId, active: true } }, { $group: { _id: '$member', n: { $sum: 1 } } }]),
+    req.query.withScores ? scoresFor(req.ownerId, members) : {},
   ]);
   const medMap = new Map(medCounts.map((m) => [String(m._id), m.n]));
   const items = members.map((m) => ({
     ...m.toJSON(),
     activeMedicines: medMap.get(String(m._id)) || 0,
-    score: scores[m._id] ? { score: scores[m._id].score, grade: scores[m._id].grade, coverage: scores[m._id].coverage } : undefined,
+    checks: scores[m._id] ? { onTrack: scores[m._id].onTrack, assessed: scores[m._id].assessed, total: scores[m._id].total } : undefined,
   }));
   return ApiResponse.success(res, 'Family members', { items });
 });
 
 export const getMember = asyncHandler(async (req, res) => {
-  const member = await getOwnedMember(req.user._id, req.params.id);
+  const member = await getOwnedMember(req.ownerId, req.params.id);
   return ApiResponse.success(res, 'Member', { member });
 });
 
 export const createMember = asyncHandler(async (req, res) => {
   const data = pick(req.body, FIELDS);
   if (data.relation === 'SELF') throw ApiError.badRequest('You are already in the family as "Self"');
-  const count = await Member.countDocuments({ owner: req.user._id });
+  const count = await Member.countDocuments({ owner: req.ownerId });
   if (count >= 20) throw ApiError.badRequest('A household can have up to 20 members');
-  const member = await Member.create({ ...data, color: data.color || (await nextColor(req.user._id)), owner: req.user._id });
+  const member = await Member.create({ ...data, color: data.color || (await nextColor(req.ownerId)), owner: req.ownerId });
   let scheduled = 0;
   if (member.dob && req.body.autoVaccines !== false) {
-    scheduled = await generateSchedule(req.user._id, member).catch(() => 0);
+    scheduled = await generateSchedule(req.ownerId, member).catch(() => 0);
   }
+  await logActivity(req, { type: 'MEMBER_ADDED', member: member._id, link: `/app/family/${member._id}`, text: `${req.user.name} added ${member.name} to the family` });
   return ApiResponse.created(res, `${member.name} added to your family`, { member, vaccinesScheduled: scheduled });
 });
 
 export const updateMember = asyncHandler(async (req, res) => {
-  const member = await getOwnedMember(req.user._id, req.params.id);
+  const member = await getOwnedMember(req.ownerId, req.params.id);
   const data = pick(req.body, FIELDS);
   if (member.isSelf) delete data.relation;
   else if (data.relation === 'SELF') throw ApiError.badRequest('Only one member can be "Self"');
@@ -66,13 +68,14 @@ export const updateMember = asyncHandler(async (req, res) => {
   if (data.doctor) data.doctor = { ...member.doctor?.toObject?.(), ...data.doctor };
   member.set(data);
   await member.save();
+  await logActivity(req, { type: 'PROFILE_UPDATED', member: member._id, link: `/app/family/${member._id}`, text: `${req.user.name} updated ${member.name.split(' ')[0]}'s health profile` });
   return ApiResponse.success(res, 'Saved', { member });
 });
 
 export const deleteMember = asyncHandler(async (req, res) => {
-  const member = await getOwnedMember(req.user._id, req.params.id);
+  const member = await getOwnedMember(req.ownerId, req.params.id);
   if (member.isSelf) throw ApiError.badRequest('You cannot remove yourself. Delete your account from Settings instead.');
-  const q = { owner: req.user._id, member: member._id };
+  const q = { owner: req.ownerId, member: member._id };
   const records = await Record.find(q).select('file');
   await Promise.all(records.map((r) => removeUpload(r.file?.key)));
   await Promise.all([
@@ -85,13 +88,13 @@ export const deleteMember = asyncHandler(async (req, res) => {
 });
 
 export const memberScore = asyncHandler(async (req, res) => {
-  const member = await getOwnedMember(req.user._id, req.params.id);
-  const scores = await scoresFor(req.user._id, [member]);
+  const member = await getOwnedMember(req.ownerId, req.params.id);
+  const scores = await scoresFor(req.ownerId, [member]);
   return ApiResponse.success(res, 'Health score', { score: scores[member._id] });
 });
 
 export const memberBrief = asyncHandler(async (req, res) => {
-  const member = await getOwnedMember(req.user._id, req.params.id);
+  const member = await getOwnedMember(req.ownerId, req.params.id);
   const brief = await buildBrief(member);
   if (req.query.ai === '1') {
     if (!isAiEnabled()) {
@@ -112,7 +115,7 @@ export const memberBrief = asyncHandler(async (req, res) => {
 });
 
 export const rotateEmergencyToken = asyncHandler(async (req, res) => {
-  const member = await getOwnedMember(req.user._id, req.params.id);
+  const member = await getOwnedMember(req.ownerId, req.params.id);
   member.emergencyToken = undefined;
   await member.save();
   return ApiResponse.success(res, 'New emergency link created. Old QR codes no longer work.', { member });

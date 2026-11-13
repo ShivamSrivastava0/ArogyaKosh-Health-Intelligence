@@ -15,6 +15,7 @@ import { Checkbox } from '../../components/ui/Field';
 import Button, { Spinner } from '../../components/ui/Button';
 import DataTable from '../../components/ui/DataTable';
 import { MemberFilter } from './Medicines';
+import { LabArt } from '../../components/illustrations';
 import { RECORD_CATEGORIES } from '../../lib/constants';
 import { fmtDate, bytes } from '../../lib/format';
 
@@ -40,7 +41,8 @@ function Extractor({ record, onDone }) {
     try {
       const res = await api.post(`/records/${record._id}/extract`);
       setState({ step: 'review', ...res });
-      setPicked(Object.fromEntries(res.values.map((v, i) => [i, v.known])));
+      // Only values that pass every check start ticked; the user must opt in to anything else.
+      setPicked(Object.fromEntries(res.values.map((v, i) => [i, v.known && v.plausible])));
       invalidate('/records');
     } catch (e) {
       setState({ step: 'error', message: errorMessage(e) });
@@ -51,6 +53,7 @@ function Extractor({ record, onDone }) {
     try {
       const r = await api.post(`/records/${record._id}/values`, { values, date: state.reportDate || undefined });
       toast.success(`${r.count} value(s) added to trends`);
+      if (r.skipped?.length) toast.error(`${r.skipped.length} value(s) failed safety checks and were not saved`);
       await invalidate('/vitals', '/today', '/scores');
       onDone?.();
       setState({ step: 'saved' });
@@ -73,16 +76,20 @@ function Extractor({ record, onDone }) {
   return (
     <div className="space-y-3 rounded-2xl border border-line p-4">
       <p className="text-sm font-semibold">Found {state.values.length} value(s){state.reportDate ? ` · report dated ${fmtDate(state.reportDate)}` : ''}</p>
+      <p className="rounded-xl bg-warn-soft px-3 py-2 text-xs text-warn">AI can misread reports. Compare each number with the report above before adding it.</p>
       {state.summary && <p className="text-[13px] leading-relaxed text-ink-2">{state.summary}</p>}
       <ul className="divide-y divide-line-soft">
         {state.values.map((v, i) => (
-          <li key={`${v.name}-${i}`} className="flex items-center justify-between gap-3 py-2">
-            <Checkbox checked={Boolean(picked[i])} onChange={(c) => setPicked((p) => ({ ...p, [i]: c }))} label={<span className={clsx(!v.known && 'text-ink-4')}>{v.name}</span>} />
-            <span className="tnum text-[13px] font-semibold">{v.value}{v.value2 ? `/${v.value2}` : ''} <span className="font-normal text-ink-3">{v.unit}</span></span>
+          <li key={`${v.name}-${i}`} className="py-2">
+            <div className="flex items-center justify-between gap-3">
+              <Checkbox checked={Boolean(picked[i])} onChange={(c) => setPicked((p) => ({ ...p, [i]: c }))} label={<span className={clsx((!v.known || !v.plausible) && 'text-ink-4')}>{v.name}</span>} />
+              <span className="tnum text-[13px] font-semibold">{v.value}{v.value2 ? `/${v.value2}` : ''} <span className="font-normal text-ink-3">{v.unit}</span></span>
+            </div>
+            {v.issue && <p className="ml-6 mt-1 text-xs text-bad">Failed check: {v.issue}</p>}
           </li>
         ))}
       </ul>
-      <p className="text-xs text-ink-3">Greyed items aren't tracked as trends yet, but stay in the summary.</p>
+      <p className="text-xs text-ink-3">Greyed items aren't tracked as trends or failed a plausibility check. Values that fail checks are refused even if ticked.</p>
       <Button size="sm" onClick={save} disabled={!Object.values(picked).some(Boolean)}>Add selected to trends</Button>
     </div>
   );
@@ -134,7 +141,7 @@ function RecordDrawer({ record, onClose }) {
         )}
         {record.summary && (
           <div className="rounded-2xl bg-paper p-4">
-            <p className="eyebrow mb-1.5">Summary</p>
+            <p className="eyebrow mb-1.5 flex items-center gap-2">Summary {record.summarySource === 'AI' && <Badge tone="info">AI-written · verify against the report</Badge>}</p>
             <p className="text-sm leading-relaxed text-ink-2">{record.summary}</p>
           </div>
         )}
@@ -161,7 +168,7 @@ export function RecordList({ member, category, q, view = 'grid' }) {
   const current = open ? items.find((r) => r._id === open) : null;
 
   const empty = (
-    <Card><Empty icon={LuFileText} title={q || category ? 'No matching records' : 'Your health locker is empty'}
+    <Card><Empty art={LabArt} title={q || category ? 'No matching records' : 'Your health locker is empty'}
       body={q || category ? 'Try a different search or filter.' : 'Upload prescriptions, lab reports, scans and bills. Find any of them in seconds — even years later.'}
       action={!q && <Button size="sm" icon={LuPlus} onClick={() => quick.open('record', { member })}>Upload a record</Button>} /></Card>
   );

@@ -34,6 +34,7 @@ export function AuthProvider({ children }) {
   }, [loadUser]);
 
   const startSession = useCallback((data) => {
+    tokens.clear(); // also forgets any household picked by a previous user
     tokens.set(data.tokens);
     clearCache();
     setUser(data.user);

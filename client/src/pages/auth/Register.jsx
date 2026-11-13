@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { LuArrowRight, LuCheck } from 'react-icons/lu';
 import { useAuth } from '../../context/AuthContext';
@@ -19,7 +19,8 @@ const RULES = [
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const location = useLocation();
+  const [form, setForm] = useState({ name: '', email: location.state?.email || '', password: '' });
   const [errors, setErrors] = useState({});
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -32,7 +33,7 @@ export default function Register() {
     setError('');
     try {
       await register({ name: form.name.trim(), email: form.email.trim(), password: form.password });
-      navigate('/app', { replace: true });
+      navigate(location.state?.from || '/app', { replace: true });
     } catch (err) {
       const fe = err?.response?.data?.errors;
       if (Array.isArray(fe)) setErrors(Object.fromEntries(fe.map((x) => [x.field, x.message])));

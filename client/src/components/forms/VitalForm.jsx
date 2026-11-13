@@ -1,8 +1,8 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { Modal } from '../ui/Overlay';
 import Button from '../ui/Button';
-import { Input, Field } from '../ui/Field';
+import { Input, Field, Segmented } from '../ui/Field';
 import { StatusBadge } from '../ui/Display';
 import { MemberPicker, useForm } from './common';
 import { api } from '../../api/client';
@@ -36,11 +36,16 @@ export default function VitalForm({ open, onClose, defaultMember, defaultType })
   useEffect(() => { if (open) setValues(init()); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const def = types.find((t) => t.type === v.type);
-  const status = preview(v.type, v.value, v.value2);
+  const [tempUnit, setTempUnit] = useState('C');
+  const isTemp = v.type === 'TEMPERATURE';
+  const toF = (x) => (x === '' ? '' : Math.round((Number(x) * 9 / 5 + 32) * 10) / 10);
+  const effective = isTemp && tempUnit === 'C' ? toF(v.value) : v.value;
+  const status = preview(v.type, effective, v.value2);
   const others = types.filter((t) => !QUICK.includes(t.type));
 
   const save = () => submit(async (s) => {
-    await api.post('/vitals', { member: s.member, type: s.type, value: Number(s.value), value2: def?.dual ? Number(s.value2) : null, at: new Date(s.at), note: s.note });
+    const value = s.type === 'TEMPERATURE' && tempUnit === 'C' ? toF(s.value) : Number(s.value);
+    await api.post('/vitals', { member: s.member, type: s.type, value, value2: def?.dual ? Number(s.value2) : null, at: new Date(s.at), note: s.note });
     await invalidate('/vitals', '/today', '/scores', '/members');
     onClose();
   }, {
@@ -83,6 +88,12 @@ export default function VitalForm({ open, onClose, defaultMember, defaultType })
             <div className="grid grid-cols-2 gap-3">
               <Input label="Systolic" type="number" inputMode="numeric" placeholder="120" value={v.value} onChange={set('value')} error={errors.value} autoFocus />
               <Input label="Diastolic" type="number" inputMode="numeric" placeholder="80" value={v.value2} onChange={set('value2')} error={errors.value2} />
+            </div>
+          ) : isTemp ? (
+            <div>
+              <div className="mb-1.5 flex items-center justify-between"><span className="label mb-0">Temperature</span><Segmented size="sm" value={tempUnit} onChange={setTempUnit} options={[['C', '°C'], ['F', '°F']]} /></div>
+              <Input type="number" step="0.1" inputMode="decimal" value={v.value} onChange={set('value')} error={errors.value} suffix={tempUnit === 'C' ? '°C' : '°F'} autoFocus aria-label="Temperature" />
+              {tempUnit === 'C' && v.value !== '' && <p className="mt-1.5 text-xs text-ink-3">Saved as {toF(v.value)} °F</p>}
             </div>
           ) : (
             <Input label={def?.label || 'Value'} type="number" step="any" inputMode="decimal" value={v.value} onChange={set('value')} error={errors.value} suffix={def?.unit} autoFocus />

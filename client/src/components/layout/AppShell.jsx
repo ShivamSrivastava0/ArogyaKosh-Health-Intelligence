@@ -11,6 +11,8 @@ import CommandPalette from './CommandPalette';
 import { NAV, SETTINGS, ALL_NAV, MOBILE_TABS } from './nav';
 import { useAuth } from '../../context/AuthContext';
 import { useQuickAdd } from '../../context/QuickAddContext';
+import { useHousehold } from '../../context/HouseholdContext';
+import { HouseholdSwitcher, NotificationBell } from './HouseholdBits';
 
 function NavItem({ item, onClick }) {
   return (
@@ -21,6 +23,7 @@ function NavItem({ item, onClick }) {
         <>
           <item.icon className={clsx('h-[18px] w-[18px]', isActive ? 'text-lime' : 'text-ink-3 group-hover:text-ink')} />
           {item.label}
+          {item.badge && <span className={clsx('ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold tracking-wide', isActive ? 'bg-lime text-ink' : 'bg-brand-100 text-brand')}>{item.badge}</span>}
         </>
       )}
     </NavLink>
@@ -33,6 +36,7 @@ function SidebarBody({ onNavigate }) {
   return (
     <div className="flex h-full flex-col">
       <Link to="/app" onClick={onNavigate} className="px-3 pb-6 pt-1"><Logo size="sm" /></Link>
+      <HouseholdSwitcher />
       <nav className="flex-1 space-y-6 overflow-y-auto">
         {NAV.map((g) => (
           <div key={g.group}>
@@ -63,6 +67,7 @@ export default function AppShell() {
   const [palette, setPalette] = useState(false);
   const { user } = useAuth();
   const quick = useQuickAdd();
+  const { canWrite, isOwner, current } = useHousehold();
   const { pathname } = useLocation();
 
   useEffect(() => {
@@ -86,6 +91,12 @@ export default function AppShell() {
 
   return (
     <div className="min-h-dvh">
+      {!isOwner && (
+        <div className="no-print flex items-center justify-center gap-2 bg-brand px-4 py-2 text-center text-[13px] text-white">
+          <span>You are {canWrite ? "helping care for" : "viewing"} <b>{current.name}</b>{canWrite ? "" : " (view only)"}.</span>
+          <Link to="/app/circle" className="font-semibold text-lime underline underline-offset-4">Care Circle</Link>
+        </div>
+      )}
       {user?.isDemo && (
         <div className="no-print flex items-center justify-center gap-3 bg-ink px-4 py-2 text-center text-[13px] text-white">
           <span>You're exploring a sample household. Changes reset after 24 hours.</span>
@@ -93,7 +104,7 @@ export default function AppShell() {
         </div>
       )}
 
-      <aside className="no-print fixed bottom-0 left-0 top-0 hidden w-[248px] border-r border-line bg-paper px-3 py-5 lg:block" style={user?.isDemo ? { top: 36 } : undefined}>
+      <aside className="no-print fixed bottom-0 left-0 top-0 hidden w-[248px] border-r border-line bg-paper px-3 py-5 lg:block" style={{ top: (user?.isDemo ? 36 : 0) + (isOwner ? 0 : 36) }}>
         <SidebarBody />
       </aside>
 
@@ -117,7 +128,8 @@ export default function AppShell() {
             </button>
             <div className="ml-auto flex items-center gap-2">
               <button type="button" onClick={() => setPalette(true)} className="grid h-10 w-10 place-items-center rounded-full hover:bg-ink/5 sm:hidden" aria-label="Search"><LuSearch className="h-5 w-5" /></button>
-              <ActionMenu items={addItems} button={<Button size="sm" icon={LuPlus}>Add</Button>} />
+              <NotificationBell />
+              {canWrite && <ActionMenu items={addItems} button={<Button size="sm" icon={LuPlus}>Add</Button>} />}
             </div>
           </div>
         </header>

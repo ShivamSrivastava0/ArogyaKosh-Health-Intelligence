@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
-import { LuPlus, LuX, LuShieldAlert, LuSunrise, LuSun, LuSunset, LuMoon } from 'react-icons/lu';
+import { LuPlus, LuX, LuShieldAlert, LuShieldCheck, LuSunrise, LuSun, LuSunset, LuMoon } from 'react-icons/lu';
 import { Modal } from '../ui/Overlay';
 import Button from '../ui/Button';
 import { Input, Select, Textarea, Field, ChipToggle, Segmented } from '../ui/Field';
@@ -38,6 +38,7 @@ export default function MedicineForm({ open, onClose, medicine, defaultMember })
   const { values: v, set, setValues, errors, saving, submit } = useForm(medicine ? fromMed(medicine) : blank(defaultMember));
   const [custom, setCustom] = useState('');
   const [warnings, setWarnings] = useState([]);
+  const [check, setCheck] = useState(null);
 
   useEffect(() => {
     if (open) setValues(medicine ? fromMed(medicine) : blank(defaultMember));
@@ -45,11 +46,11 @@ export default function MedicineForm({ open, onClose, medicine, defaultMember })
 
   // Live safety check while typing the name.
   useEffect(() => {
-    if (!open || !v.member || v.name.trim().length < 3) { setWarnings([]); return undefined; }
+    if (!open || !v.member || v.name.trim().length < 3) { setWarnings([]); setCheck(null); return undefined; }
     const t = setTimeout(() => {
       api.post('/medicines/check', { member: v.member, name: v.name.trim(), excludeId: medicine?._id })
-        .then((r) => setWarnings(r.warnings))
-        .catch(() => setWarnings([]));
+        .then((r) => { setWarnings(r.warnings); setCheck(r); })
+        .catch(() => { setWarnings([]); setCheck(null); });
     }, 450);
     return () => clearTimeout(t);
   }, [v.name, v.member, open, medicine?._id]);
@@ -101,6 +102,20 @@ export default function MedicineForm({ open, onClose, medicine, defaultMember })
               </div>
             ))}
           </div>
+        )}
+
+        {check && !warnings.length && (
+          check.recognised ? (
+            <p className="flex items-start gap-2 rounded-xl bg-ok-soft px-3 py-2 text-xs text-ok">
+              <LuShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>Recognised as {check.ingredients.join(' + ')}. No conflicts found against {check.coverage.interactionRules} known interaction rules or recorded allergies. This list isn't exhaustive — your pharmacist has the full picture.</span>
+            </p>
+          ) : (
+            <p className="flex items-start gap-2 rounded-xl bg-paper px-3 py-2 text-xs text-ink-3">
+              <LuShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>We don't recognise "{v.name.trim()}" yet, so it <b>could not be checked</b> for interactions or allergies. Please confirm with your pharmacist.</span>
+            </p>
+          )
         )}
 
         <Field label="When" error={errors.times}>

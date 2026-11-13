@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { LuSend, LuSparkles, LuDatabase, LuSiren, LuRotateCcw } from 'react-icons/lu';
+import { LuSend, LuSparkles, LuDatabase, LuSiren, LuRotateCcw, LuShieldCheck } from 'react-icons/lu';
 import { api, errorMessage } from '../../api/client';
 import { useFamily } from '../../context/FamilyContext';
 import { PageHeader, Badge } from '../../components/ui/Display';
@@ -33,7 +33,8 @@ export default function Assistant() {
   const parent = members.find((m) => ['FATHER', 'MOTHER'].includes(m.relation));
   const suggestions = [
     parent ? `What medicines does ${firstName(parent.name)} take?` : 'What medicines am I taking?',
-    'When is the next appointment?',
+    parent ? `What is ${firstName(parent.name)}'s heart age and risk?` : 'What is my heart age?',
+    'Whose health is trending the wrong way?',
     parent ? `What was ${firstName(parent.name)}'s latest BP?` : 'What was my latest BP?',
     'Which vaccines are due?',
     'Any medicines running low?',
@@ -49,7 +50,7 @@ export default function Assistant() {
     setBusy(true);
     try {
       const r = await api.post('/assistant', { message, history });
-      setMessages((m) => [...m, { role: 'assistant', content: r.reply, mode: r.mode }]);
+      setMessages((m) => [...m, { role: 'assistant', content: r.reply, mode: r.mode, verification: r.verification }]);
     } catch (e) {
       setMessages((m) => [...m, { role: 'assistant', content: errorMessage(e), mode: 'error' }]);
     } finally {
@@ -59,7 +60,7 @@ export default function Assistant() {
 
   return (
     <div className="flex min-h-[calc(100dvh-9rem)] flex-col">
-      <PageHeader title="Ask Kosh" subtitle="Questions about your family's medicines, readings, appointments and vaccines — answered from your own records."
+      <PageHeader title="Ask Kosh" subtitle="Ask about risks, forecasts, medicines, readings and appointments — answered from your family's records and ArogyaPredict."
         actions={messages.length > 0 && <Button variant="secondary" size="sm" icon={LuRotateCcw} onClick={() => setMessages([])}>New chat</Button>} />
 
       <div className="flex-1 space-y-5 pb-6">
@@ -84,7 +85,15 @@ export default function Assistant() {
               m.role === 'user' ? 'rounded-br-lg bg-ink text-white' : m.mode === 'safety' ? 'rounded-bl-lg border border-bad/30 bg-bad-soft' : m.mode === 'error' ? 'rounded-bl-lg bg-bad-soft text-bad' : 'card rounded-bl-lg')}>
               {m.role === 'assistant' ? <Markdown text={m.content} /> : m.content}
               {m.role === 'assistant' && MODE[m.mode] && (
-                <div className="mt-3"><Badge tone={MODE[m.mode].tone}>{(() => { const I = MODE[m.mode].icon; return <I className="h-3 w-3" />; })()}{MODE[m.mode].label}</Badge></div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Badge tone={MODE[m.mode].tone}>{(() => { const I = MODE[m.mode].icon; return <I className="h-3 w-3" />; })()}{MODE[m.mode].label}</Badge>
+                  {m.verification?.checked > 0 && !m.verification.unverified.length && <Badge tone="ok"><LuShieldCheck className="h-3 w-3" />{m.verification.checked} value{m.verification.checked > 1 ? 's' : ''} matched to your records</Badge>}
+                </div>
+              )}
+              {m.verification?.unverified?.length > 0 && (
+                <p className="mt-3 rounded-xl bg-warn-soft px-3 py-2 text-xs text-warn">
+                  Couldn't match {m.verification.unverified.join(', ')} to your records. Treat {m.verification.unverified.length > 1 ? 'these' : 'this'} as unverified and check the readings directly.
+                </p>
               )}
             </div>
           </div>

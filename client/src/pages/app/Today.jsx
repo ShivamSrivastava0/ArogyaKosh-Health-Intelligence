@@ -4,8 +4,10 @@ import clsx from 'clsx';
 import toast from 'react-hot-toast';
 import {
   LuCheck, LuSkipForward, LuChevronLeft, LuChevronRight, LuSunrise, LuSun, LuSunset, LuMoon, LuPill, LuArrowRight,
-  LuTriangleAlert, LuCircleAlert, LuInfo, LuCalendarDays, LuSyringe, LuShieldCheck, LuPlus, LuUndo2, LuX,
+  LuTriangleAlert, LuCircleAlert, LuInfo, LuCalendarDays, LuSyringe, LuShieldCheck, LuPlus, LuUndo2, LuX, LuBrainCircuit,
 } from 'react-icons/lu';
+import InsightList from '../../components/predict/Insights';
+import { FamilyArt } from '../../components/illustrations';
 import { useApi, setCached, invalidate } from '../../hooks/useApi';
 import { api, errorMessage } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -27,7 +29,7 @@ const nowHm = () => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
 
-function DoseRow({ dose, isToday, onSet }) {
+function DoseRow({ dose, isToday, isFuture, onSet, me }) {
   const late = isToday && dose.status === 'PENDING' && dose.time < nowHm();
   const done = dose.status === 'TAKEN';
   const skipped = dose.status === 'SKIPPED';
@@ -44,10 +46,12 @@ function DoseRow({ dose, isToday, onSet }) {
           {dose.medicine.mealTiming !== 'ANY' && <><span>·</span><span>{MEAL_TIMING[dose.medicine.mealTiming]}</span></>}
           {dose.medicine.dose !== 1 && <><span>·</span><span>×{dose.medicine.dose}</span></>}
           {late && <Badge tone="warn">Due</Badge>}
+          {dose.byName && dose.status !== "PENDING" && <><span>·</span><span>by {dose.byName === me ? "you" : firstName(dose.byName)}</span></>}
           {dose.medicine.stock?.low && <Badge tone="bad">{dose.medicine.stock.stock} left</Badge>}
+          {dose.missRisk && <span title="ArogyaPredict learned this dose is often missed — set an alarm"><Badge tone="info"><LuBrainCircuit className="h-3 w-3" />{dose.missRisk}% likely missed</Badge></span>}
         </p>
       </div>
-      {dose.status === 'PENDING' ? (
+      {isFuture ? <span className="text-xs text-ink-4">Upcoming</span> : dose.status === 'PENDING' ? (
         <div className="flex items-center gap-1.5">
           <button type="button" onClick={() => onSet(dose, 'SKIPPED')} className="grid h-9 w-9 place-items-center rounded-full text-ink-3 hover:bg-ink/5 hover:text-ink" aria-label={`Skip ${dose.medicine.name}`} title="Skip">
             <LuSkipForward className="h-4 w-4" />
@@ -87,10 +91,11 @@ function Onboarding({ feed, onDismiss }) {
   return (
     <Card className="relative overflow-hidden border-ink bg-ink p-6 text-white">
       <button type="button" onClick={onDismiss} className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full text-white/60 hover:bg-white/10 hover:text-white" aria-label="Dismiss"><LuX className="h-4 w-4" /></button>
+      <FamilyArt className="pointer-events-none absolute -right-4 -top-2 hidden h-40 opacity-90 xl:block" />
       <p className="eyebrow text-lime">Get set up · {done}/{steps.length}</p>
-      <h2 className="mt-2 text-2xl font-semibold">Let's build your family's health vault</h2>
-      <p className="mt-1 text-sm text-white/60">Five minutes now saves a frantic search later.</p>
-      <ul className="mt-5 grid gap-2 sm:grid-cols-2">
+      <h2 className="mt-2 text-2xl font-semibold">Switch on predictions for your family</h2>
+      <p className="mt-1 max-w-lg text-sm text-white/60">Every detail you add unlocks another model — heart age, BP and sugar forecasts, missed-dose alerts.</p>
+      <ul className="mt-5 grid gap-2 sm:grid-cols-2 xl:max-w-[70%]">
         {steps.map((s) => {
           const inner = (
             <>
@@ -103,6 +108,51 @@ function Onboarding({ feed, onDismiss }) {
           return <li key={s.label}>{s.to ? <Link to={s.to} className={cls}>{inner}</Link> : <button type="button" onClick={s.action} className={cls}>{inner}</button>}</li>;
         })}
       </ul>
+    </Card>
+  );
+}
+
+function PredictPanel({ predictions }) {
+  const radar = predictions?.radar || [];
+  const insights = predictions?.insights || [];
+  if (!radar.length) return null;
+  return (
+    <Card className="overflow-hidden">
+      <div className="grid xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="p-5">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink text-lime"><LuBrainCircuit className="h-4 w-4" /></span>
+              <div>
+                <h2 className="font-sans text-[15px] font-semibold tracking-normal">ArogyaPredict</h2>
+                <p className="text-xs text-ink-3">What's likely coming, from risk models and your family's own trends</p>
+              </div>
+            </div>
+            <Button to="/app/predict" size="xs" variant="secondary" iconRight={LuArrowRight}>Full forecast</Button>
+          </div>
+          {insights.length ? <InsightList insights={insights} withMember compact linkTo={(i) => `/app/predict?member=${i.member._id}`} />
+            : <p className="px-3 py-4 text-sm text-ink-3">No risks or worrying trends detected. Keep logging readings — predictions sharpen with data.</p>}
+        </div>
+        <div className="border-t border-line-soft bg-gradient-to-b from-brand-50 to-surface p-5 xl:border-l xl:border-t-0">
+          <p className="eyebrow mb-3">Heart age · 10-yr risk</p>
+          <ul className="space-y-2">
+            {radar.map((r) => (
+              <li key={r.member._id}>
+                <Link to={`/app/predict?member=${r.member._id}`} className="flex items-center gap-3 rounded-2xl bg-surface/80 px-3 py-2.5 hover:bg-surface">
+                  <Avatar name={r.member.name} color={r.member.color} size="sm" />
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{r.member.isSelf ? 'You' : firstName(r.member.name)}</span>
+                  {r.cardio ? (
+                    <span className="flex items-center gap-2 text-right">
+                      <span className="tnum font-display text-lg font-semibold">{r.cardio.heartAge >= 80 ? '80+' : r.cardio.heartAge}</span>
+                      <Badge tone={{ LOW: 'ok', MODERATE: 'warn', HIGH: 'bad' }[r.cardio.band]}>{r.cardio.risk}%</Badge>
+                    </span>
+                  ) : <span className="text-xs text-ink-4">{r.member.age !== null && r.member.age < 30 ? 'Under 30' : 'Needs data'}</span>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </Card>
   );
 }
@@ -167,6 +217,8 @@ export default function Today() {
 
       {feed && !user?.prefs?.onboarded && !user?.isDemo && <Onboarding feed={feed} onDismiss={dismissOnboarding} />}
 
+      {loading ? <Skeleton className="h-56" /> : <PredictPanel predictions={feed?.predictions} />}
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-6">
           <Card>
@@ -196,7 +248,7 @@ export default function Today() {
                       <s.icon className="h-3.5 w-3.5" /> {s.label}
                       <span className="text-ink-4">{s.doses.filter((d) => d.status === 'TAKEN').length}/{s.doses.length}</span>
                     </p>
-                    <ul className="divide-y divide-line-soft">{s.doses.map((d) => <DoseRow key={d.id} dose={d} isToday={isToday} onSet={setDose} />)}</ul>
+                    <ul className="divide-y divide-line-soft">{s.doses.map((d) => <DoseRow key={d.id} dose={d} isToday={isToday} isFuture={date > todayKey()} onSet={setDose} me={user?.name} />)}</ul>
                   </section>
                 ))}
                 {sum.total > 0 && sum.taken === sum.total && (

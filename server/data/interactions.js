@@ -12,7 +12,7 @@ export const BRANDS = {
   combiflam: ['ibuprofen', 'paracetamol'], brufen: ['ibuprofen'], voveran: ['diclofenac'],
   ecosprin: ['aspirin'], 'ecosprin av': ['aspirin', 'atorvastatin'], disprin: ['aspirin'],
   augmentin: ['amoxicillin', 'clavulanate'], moxikind: ['amoxicillin'], mox: ['amoxicillin'],
-  azithral: ['azithromycin'], azee: ['azithromycin'], taxim: ['cefixime'], zifi: ['cefixime'],
+  azithral: ['azithromycin'], azee: ['azithromycin'], 'taxim o': ['cefixime'], taxim: ['cefotaxime'], zifi: ['cefixime'],
   ciplox: ['ciprofloxacin'], septran: ['sulfamethoxazole', 'trimethoprim'],
   pan: ['pantoprazole'], pantocid: ['pantoprazole'], omez: ['omeprazole'], nexpro: ['esomeprazole'],
   glycomet: ['metformin'], 'glycomet gp': ['metformin', 'glimepiride'], amaryl: ['glimepiride'],
@@ -45,6 +45,7 @@ const MINERALS = ['calcium', 'iron', 'antacid', 'magnesium', 'zinc'];
 
 export const INTERACTIONS = [
   { a: ANTICOAG, b: NSAIDS, severity: 'HIGH', effect: 'Raises the risk of serious bleeding.', advice: 'Avoid together unless a doctor has specifically approved it.' },
+  { a: ['aspirin'], b: NSAIDS.filter((n) => n !== 'aspirin'), severity: 'MODERATE', effect: 'Ibuprofen-type painkillers can block the heart-protective effect of low-dose aspirin and raise stomach-bleeding risk (FDA advisory).', advice: 'If a painkiller is needed, ask about paracetamol, or timing it after the aspirin dose.' },
   { a: ['clopidogrel'], b: ['aspirin'], severity: 'MODERATE', effect: 'Dual antiplatelet therapy increases bleeding risk.', advice: 'Usually intentional after a cardiac event — confirm duration with the cardiologist.' },
   { a: ['clopidogrel'], b: PPI, severity: 'MODERATE', effect: 'Omeprazole/esomeprazole can reduce how well clopidogrel works.', advice: 'Ask whether pantoprazole is a suitable alternative.' },
   { a: PDE5, b: NITRATES, severity: 'HIGH', effect: 'Can cause a dangerous drop in blood pressure.', advice: 'Do not combine.' },
@@ -62,7 +63,7 @@ export const INTERACTIONS = [
 
 export const ALLERGY_CLASSES = [
   { match: ['penicillin', 'amoxicillin', 'ampicillin'], ingredients: ['amoxicillin', 'ampicillin', 'penicillin', 'cloxacillin', 'piperacillin', 'clavulanate'], severity: 'HIGH', label: 'penicillin-class antibiotic' },
-  { match: ['penicillin'], ingredients: ['cefixime', 'cefuroxime', 'cephalexin', 'ceftriaxone', 'cefpodoxime'], severity: 'LOW', label: 'cephalosporin (small cross-reaction risk with penicillin allergy)' },
+  { match: ['penicillin'], ingredients: ['cefixime', 'cefotaxime', 'cefuroxime', 'cephalexin', 'ceftriaxone', 'cefpodoxime'], severity: 'LOW', label: 'cephalosporin (small cross-reaction risk with penicillin allergy)' },
   { match: ['sulfa', 'sulpha', 'sulfonamide'], ingredients: ['sulfamethoxazole', 'sulfasalazine'], severity: 'HIGH', label: 'sulfonamide' },
   { match: ['nsaid', 'aspirin', 'ibuprofen', 'diclofenac', 'painkiller'], ingredients: NSAIDS, severity: 'HIGH', label: 'NSAID painkiller' },
   { match: ['codeine', 'opioid', 'morphine', 'tramadol'], ingredients: ['codeine', 'tramadol', 'morphine'], severity: 'MODERATE', label: 'opioid' },

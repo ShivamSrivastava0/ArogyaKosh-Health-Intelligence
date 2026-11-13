@@ -1,19 +1,21 @@
 import { Link } from 'react-router-dom';
-import { LuPlus, LuDroplet, LuPill, LuTriangleAlert, LuChevronRight } from 'react-icons/lu';
+import { LuPlus, LuDroplet, LuPill, LuTriangleAlert, LuChevronRight, LuBrainCircuit } from 'react-icons/lu';
 import { useApi } from '../../hooks/useApi';
 import { useQuickAdd } from '../../context/QuickAddContext';
-import { PageHeader, Avatar, ScoreRing, Badge, Skeleton } from '../../components/ui/Display';
+import { PageHeader, Avatar, Badge, Skeleton } from '../../components/ui/Display';
 import Button from '../../components/ui/Button';
 import { RELATIONS } from '../../lib/constants';
 
 export default function Family() {
   const quick = useQuickAdd();
   const { data, loading } = useApi('/members', { withScores: 1 });
+  const { data: pred } = useApi('/predict');
+  const radar = new Map((pred?.members || []).map((r) => [r.member._id, r]));
   const members = data?.items || [];
 
   return (
     <div>
-      <PageHeader title="Family" subtitle="One profile per person — allergies, conditions, doctors, insurance and a health score that explains itself."
+      <PageHeader title="Family" subtitle="One profile per person — with heart age, risk forecasts and health checks against clinical thresholds."
         actions={<Button icon={LuPlus} onClick={() => quick.open('member')}>Add member</Button>} />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {loading && [0, 1, 2].map((i) => <Skeleton key={i} className="h-56" />)}
@@ -30,7 +32,7 @@ export default function Family() {
                     <p className="mt-0.5 text-[13px] text-ink-3">{RELATIONS[m.relation]}{m.age !== null ? ` · ${m.age < 1 ? 'under 1' : `${m.age} yr${m.age === 1 ? '' : 's'}`}` : ''}</p>
                   </div>
                 </div>
-                <ScoreRing value={m.score?.score} size={52} stroke={5} />
+                {m.checks?.assessed > 0 && <span className="rounded-full bg-paper px-2.5 py-1 text-xs font-semibold" title="Areas within the healthy range"><span className="tnum">{m.checks.onTrack}/{m.checks.assessed}</span> in range</span>}
               </div>
               <div className="mt-5 flex flex-wrap gap-1.5">
                 <Badge tone={m.bloodGroup ? 'neutral' : 'warn'}><LuDroplet className="h-3 w-3" />{m.bloodGroup || 'Blood group?'}</Badge>
@@ -38,8 +40,21 @@ export default function Family() {
                 {severe.map((a) => <Badge key={a._id} tone="bad"><LuTriangleAlert className="h-3 w-3" />{a.name}</Badge>)}
               </div>
               <p className="mt-3 line-clamp-1 text-[13px] text-ink-3">{active.length ? active.map((c) => c.name).join(', ') : 'No long-term conditions recorded'}</p>
+              {(() => {
+                const r = radar.get(m._id);
+                if (!r?.cardio) return null;
+                const tone = { LOW: 'text-ok', MODERATE: 'text-warn', HIGH: 'text-bad' }[r.cardio.band];
+                return (
+                  <div className="mt-3 flex items-center gap-2 rounded-xl bg-brand-50 px-3 py-2 text-[13px]">
+                    <LuBrainCircuit className="h-4 w-4 text-brand" />
+                    <span>Heart age <b className="tnum">{r.cardio.heartAge >= 80 ? '80+' : r.cardio.heartAge}</b></span>
+                    <span className="text-ink-4">·</span>
+                    <span className={tone}>10-yr risk <b className="tnum">{r.cardio.risk}%</b></span>
+                  </div>
+                );
+              })()}
               <div className="mt-auto flex items-center justify-between border-t border-line-soft pt-4 text-[13px]">
-                <span className="text-ink-3">{m.score?.score !== null && m.score?.score !== undefined ? `Health score · ${m.score.grade}` : 'Add details to get a health score'}</span>
+                <span className="text-ink-3">{m.checks?.assessed ? `${m.checks.total - m.checks.assessed} area(s) not checked yet` : "Add readings to start health checks"}</span>
                 <LuChevronRight className="h-4 w-4 text-ink-4 transition-transform group-hover:translate-x-0.5 group-hover:text-ink" />
               </div>
             </Link>

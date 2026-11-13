@@ -82,6 +82,7 @@ export const dosesForDay = async (ownerId, dateKey, memberId) => {
         time,
         status: log?.status || 'PENDING',
         at: log?.at || null,
+        byName: log?.byName || '',
       });
     }
   }
@@ -92,12 +93,16 @@ export const dosesForDay = async (ownerId, dateKey, memberId) => {
  * Record a dose as TAKEN / SKIPPED (or clear it with status=null).
  * Keeps medicine stock consistent with the log.
  */
-export const setDoseStatus = async (ownerId, { medicineId, date, time, status }) => {
+export const setDoseStatus = async (ownerId, { medicineId, date, time, status, actor }) => {
   assertObjectId(medicineId, 'medicine');
   if (!parseDateKey(date)) throw ApiError.badRequest('date must be YYYY-MM-DD');
   const med = await Medicine.findOne({ _id: medicineId, owner: ownerId });
   if (!med) throw ApiError.notFound('Medicine not found');
   if (!med.times.includes(time)) throw ApiError.badRequest('That time is not part of the schedule');
+  // Doses can't be logged ahead of time — that would corrupt adherence and stock.
+  // (14h tolerance covers users whose local date is ahead of the server's.)
+  if (status && date > toDateKey(new Date(Date.now() + 14 * 3600000))) throw ApiError.badRequest('You can only mark doses for today or earlier');
+  if (status && !isScheduledOn(med, parseDateKey(date))) throw ApiError.badRequest('This medicine was not scheduled on that day');
 
   const existing = await DoseLog.findOne({ medicine: med._id, date, time });
   const wasTaken = existing?.status === 'TAKEN';
@@ -108,16 +113,18 @@ export const setDoseStatus = async (ownerId, { medicineId, date, time, status })
   } else if (existing) {
     existing.status = status;
     existing.at = new Date();
+    existing.by = actor?._id || null;
+    existing.byName = actor?.name || '';
     await existing.save();
   } else {
-    await DoseLog.create({ owner: ownerId, member: med.member, medicine: med._id, date, time, status });
+    await DoseLog.create({ owner: ownerId, member: med.member, medicine: med._id, date, time, status, by: actor?._id || null, byName: actor?.name || '' });
   }
 
   if (med.stock !== null && med.stock !== undefined && wasTaken !== nowTaken) {
     med.stock = Math.max(0, med.stock + (nowTaken ? -med.dose : med.dose));
     await med.save();
   }
-  return { status: status || 'PENDING', stock: stockInfo(med) };
+  return { status: status || 'PENDING', stock: stockInfo(med), medicineName: med.name, memberId: med.member };
 };
 
 /**

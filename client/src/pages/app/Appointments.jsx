@@ -9,6 +9,7 @@ import { Card, PageHeader, Empty, MemberChip, Badge, Tabs, Skeleton } from '../.
 import { ActionMenu, Modal, useConfirm } from '../../components/ui/Overlay';
 import Button from '../../components/ui/Button';
 import { MemberFilter } from './Medicines';
+import { EmptyArt } from '../../components/illustrations';
 import { REMINDER_TYPES, REPEAT_SHORT } from '../../lib/constants';
 import { fmtTime, relDays, daysFromNow, fmtDate } from '../../lib/format';
 
@@ -81,7 +82,7 @@ export function ReminderList({ member, status = 'UPCOMING' }) {
   if (loading) return <Skeleton className="h-48" />;
   if (!items.length) {
     return (
-      <Card><Empty icon={LuCalendarDays} title={status === 'DONE' ? 'Nothing completed yet' : 'No upcoming appointments'}
+      <Card><Empty art={EmptyArt} title={status === 'DONE' ? 'Nothing completed yet' : 'No upcoming appointments'}
         body={status === 'DONE' ? 'Completed visits and checkups show here — handy for the doctor brief.' : 'Add doctor visits, annual checkups, dental cleanings or lab tests. Repeating ones roll forward on their own.'}
         action={status !== 'DONE' && <Button size="sm" icon={LuPlus} onClick={() => quick.open('reminder', { member })}>Add appointment</Button>} /></Card>
     );

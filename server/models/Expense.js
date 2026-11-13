@@ -19,6 +19,11 @@ const expenseSchema = new Schema(
   { timestamps: true }
 );
 
+expenseSchema.pre('validate', function checkDate(next) {
+  if (this.date && this.date.getTime() > Date.now() + 86400000) this.invalidate('date', 'An expense cannot be dated in the future');
+  next();
+});
+
 expenseSchema.index({ owner: 1, date: -1 });
 expenseSchema.set('toJSON', { transform(_d, ret) { delete ret.__v; return ret; } });
 

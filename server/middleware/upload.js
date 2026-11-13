@@ -15,7 +15,7 @@ const ALLOWED = {
 
 const storage = multer.diskStorage({
   destination(req, _file, cb) {
-    const dir = path.join(UPLOAD_ROOT, String(req.user._id));
+    const dir = path.join(UPLOAD_ROOT, String(req.ownerId));
     fs.mkdir(dir, { recursive: true }, (err) => cb(err, dir));
   },
   filename(_req, file, cb) {

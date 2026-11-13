@@ -7,12 +7,13 @@ import { useApi, invalidate } from '../../hooks/useApi';
 import { api, errorMessage } from '../../api/client';
 import { useFamily } from '../../context/FamilyContext';
 import { useQuickAdd } from '../../context/QuickAddContext';
-import { Card, PageHeader, Empty, StatusBadge, TrendIcon, Avatar, Skeleton } from '../../components/ui/Display';
+import { Card, PageHeader, Empty, StatusBadge, TrendIcon, Avatar, Skeleton, Badge } from '../../components/ui/Display';
 import { Segmented } from '../../components/ui/Field';
 import { useConfirm } from '../../components/ui/Overlay';
 import Button from '../../components/ui/Button';
 import DataTable from '../../components/ui/DataTable';
 import { Trend } from '../../components/charts/Charts';
+import { ForecastArt } from '../../components/illustrations';
 import { fmtDateTime, fmtShort, relDays, firstName, shiftKey, todayKey } from '../../lib/format';
 
 export const BANDS = {
@@ -59,7 +60,7 @@ export function VitalsPanel({ memberId, initialType }) {
   if (!withData.length) {
     return (
       <Card>
-        <Empty icon={LuActivity} title="No readings yet" body="Log BP, sugar, weight or lab values. We'll chart them, flag anything outside the normal range and include them in the doctor brief."
+        <Empty art={ForecastArt} title="No readings yet" body="Log BP, sugar, weight or lab values. ArogyaPredict charts them against normal ranges, learns the trend and forecasts where it's heading."
           action={<Button size="sm" icon={LuPlus} onClick={() => quick.open('vital', { member: memberId })}>Log first reading</Button>} />
       </Card>
     );
@@ -106,7 +107,14 @@ export function VitalsPanel({ memberId, initialType }) {
             { key: 'at', header: 'Date', mobile: 'title', render: (r) => <span className="text-[13px] font-medium">{fmtDateTime(r.at)}</span> },
             { key: 'value', header: 'Reading', render: (r) => <span className="tnum font-semibold">{show(r, def)} <span className="text-xs font-normal text-ink-3">{r.unit}</span></span> },
             { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
-            { key: 'note', header: 'Note', mobile: 'hide', render: (r) => <span className="text-[13px] text-ink-3">{r.note}</span> },
+            { key: 'source', header: 'Source', mobile: 'hide', render: (r) => (
+              <span className="flex flex-wrap items-center gap-1.5 text-[13px] text-ink-3">
+                {r.source === 'REPORT_AI' ? <Badge tone="info" className="font-medium">Read from report by AI · you confirmed</Badge>
+                  : r.source === 'REPORT_MANUAL' ? <Badge className="font-medium">From report</Badge>
+                    : <Badge className="font-medium">Entered by you</Badge>}
+                {r.note && <span className="truncate">{r.note}</span>}
+              </span>
+            ) },
             { key: 'x', header: '', align: 'right', mobile: 'end', render: (r) => <button type="button" onClick={() => remove(r)} className="grid h-8 w-8 place-items-center rounded-full text-ink-4 hover:bg-bad-soft hover:text-bad" aria-label="Delete"><LuTrash2 className="h-4 w-4" /></button> },
           ]} />
       </Card>
@@ -122,7 +130,7 @@ export default function Vitals() {
 
   return (
     <div>
-      <PageHeader title="Vitals & labs" subtitle="Track BP, sugar, weight and lab values. Out-of-range readings are flagged on Today."
+      <PageHeader title="Vitals & labs" subtitle="Every reading trains ArogyaPredict — out-of-range values are flagged and trends are forecast ahead."
         actions={<Button icon={LuPlus} onClick={() => quick.open('vital', { member: memberId })}>Log reading</Button>} />
       <div className="scrollbar-none -mx-4 mb-6 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         {members.map((m) => (

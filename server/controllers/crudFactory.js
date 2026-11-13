@@ -23,13 +23,13 @@ export const crud = ({ Model, name, fields, memberRequired = true, sort = { crea
 
   const findOwned = async (req) => {
     assertObjectId(req.params.id, name.toLowerCase());
-    const doc = await Model.findOne({ _id: req.params.id, owner: req.user._id });
+    const doc = await Model.findOne({ _id: req.params.id, owner: req.ownerId });
     if (!doc) throw ApiError.notFound(`${name} not found`);
     return doc;
   };
 
   const list = asyncHandler(async (req, res) => {
-    const q = { owner: req.user._id, ...(filter ? filter(req) : {}) };
+    const q = { owner: req.ownerId, ...(filter ? filter(req) : {}) };
     if (req.query.member) q.member = assertObjectId(req.query.member, 'member');
     const limit = Math.min(Number(req.query.limit) || maxLimit, maxLimit);
     let query = Model.find(q).sort(sort).limit(limit);
@@ -47,8 +47,8 @@ export const crud = ({ Model, name, fields, memberRequired = true, sort = { crea
   const create = asyncHandler(async (req, res) => {
     const data = pick(req.body, fields);
     if (memberRequired && !data.member) throw ApiError.badRequest('Choose a family member');
-    if (data.member) await assertMembersOwned(req.user._id, [data.member]);
-    const doc = new Model({ ...data, owner: req.user._id });
+    if (data.member) await assertMembersOwned(req.ownerId, [data.member]);
+    const doc = new Model({ ...data, owner: req.ownerId });
     if (hooks.beforeSave) await hooks.beforeSave(doc, req, true);
     await doc.save();
     if (hooks.afterSave) await hooks.afterSave(doc, req, true);
@@ -59,7 +59,7 @@ export const crud = ({ Model, name, fields, memberRequired = true, sort = { crea
   const update = asyncHandler(async (req, res) => {
     const doc = await findOwned(req);
     const data = pick(req.body, fields);
-    if (data.member) await assertMembersOwned(req.user._id, [data.member]);
+    if (data.member) await assertMembersOwned(req.ownerId, [data.member]);
     doc.set(data);
     if (hooks.beforeSave) await hooks.beforeSave(doc, req, false);
     await doc.save();

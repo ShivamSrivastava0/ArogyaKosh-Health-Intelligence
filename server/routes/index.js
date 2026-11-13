@@ -18,6 +18,9 @@ import * as expenses from '../controllers/expenseController.js';
 import * as insights from '../controllers/insightController.js';
 import * as share from '../controllers/shareController.js';
 import * as pub from '../controllers/publicController.js';
+import * as predict from '../controllers/predictController.js';
+import * as circle from '../controllers/circleController.js';
+import { resolveHousehold, requireWrite, ownerOnly } from '../middleware/household.js';
 
 const router = Router();
 
@@ -33,6 +36,7 @@ publicRouter.get('/emergency/:token', pub.emergency);
 publicRouter.get('/share/:token', pub.sharedBrief);
 publicRouter.get('/share/:token/records/:recordId/file', pub.sharedFile);
 publicRouter.get('/calendar/:token', pub.calendar);
+publicRouter.get('/invites/:token', circle.preview);
 router.use('/public', publicRouter);
 
 // ---- Auth --------------------------------------------------------------------
@@ -59,9 +63,32 @@ router.use('/auth', a);
 // ---- Everything below requires sign-in --------------------------------------
 router.use(authenticate);
 
+// Not tied to one household: which families can I open, invites, my notifications.
+router.get('/households', circle.households);
+router.post('/invites/:token/accept', limiter(20), circle.accept);
+router.get('/notifications', circle.notifications);
+router.post('/notifications/read', circle.markRead);
+
+// Everything below acts on the household chosen via the X-Household header.
+router.use(resolveHousehold, requireWrite);
+
+router.get('/circle', circle.circle);
+router.get('/circle/activity', circle.activity);
+router.get('/circle/report', circle.report);
+router.post('/circle/invites', ownerOnly, limiter(30), circle.invite);
+router.delete('/circle/invites/:id', ownerOnly, circle.revokeInvite);
+router.patch('/circle/members/:id', ownerOnly, circle.updateMember);
+router.delete('/circle/members/:id', ownerOnly, circle.removeMember);
+router.patch('/circle/me/alerts', circle.myAlerts);
+router.post('/circle/leave', circle.leave);
+
 router.get('/today', insights.today);
 router.get('/scores', insights.scores);
 router.get('/readiness', insights.readiness);
+
+router.get('/predict', predict.household);
+router.get('/predict/:id', predict.member);
+router.post('/predict/:id/simulate', limiter(120), predict.simulate);
 router.post('/assistant', limiter(60), insights.assistant);
 router.get('/kit', insights.kit);
 router.put('/kit', insights.updateKit);
@@ -70,10 +97,10 @@ router.get('/members', members.listMembers);
 router.post('/members', members.createMember);
 router.get('/members/:id', members.getMember);
 router.patch('/members/:id', members.updateMember);
-router.delete('/members/:id', members.deleteMember);
+router.delete('/members/:id', ownerOnly, members.deleteMember);
 router.get('/members/:id/score', members.memberScore);
 router.get('/members/:id/brief', members.memberBrief);
-router.post('/members/:id/emergency-token', members.rotateEmergencyToken);
+router.post('/members/:id/emergency-token', ownerOnly, members.rotateEmergencyToken);
 
 router.get('/medicines', meds.listMedicines);
 router.post('/medicines', meds.createMedicine);

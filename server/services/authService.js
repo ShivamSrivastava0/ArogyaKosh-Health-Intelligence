@@ -11,11 +11,11 @@ import Reminder from '../models/Reminder.js';
 import Vaccination from '../models/Vaccination.js';
 import Expense from '../models/Expense.js';
 import ShareLink from '../models/ShareLink.js';
+import { CircleMember, CircleInvite, Activity, Notification } from '../models/Circle.js';
 import { env } from '../config/env.js';
 import { sendMail } from '../config/mail.js';
 import { UPLOAD_ROOT } from '../middleware/upload.js';
 
-export const hashToken = sha256;
 const MAX_SESSIONS = 10;
 
 /** Issue an access + refresh pair and remember the (hashed) refresh token. */
@@ -62,15 +62,15 @@ export const revokeRefreshToken = async (userId, refreshToken) => {
   await User.updateOne({ _id: userId }, update);
 };
 
-const emailShell = (title, body, cta, url) => `<!doctype html><html><body style="margin:0;background:#f6f6f3;font-family:-apple-system,Segoe UI,Inter,sans-serif">
+const emailShell = (title, body, cta, url) => `<!doctype html><html><body style="margin:0;background:#f3f7f9;font-family:-apple-system,Segoe UI,Inter,sans-serif">
 <div style="max-width:520px;margin:0 auto;padding:40px 20px">
-<div style="font-weight:700;font-size:18px;color:#111;margin-bottom:24px">arogya<span style="background:#d4f25a;padding:0 4px;border-radius:4px">kosh</span></div>
-<div style="background:#fff;border:1px solid #e7e6e1;border-radius:16px;padding:32px">
-<h1 style="font-size:22px;margin:0 0 12px;color:#111">${title}</h1>
-<div style="color:#55554f;font-size:15px;line-height:1.6">${body}</div>
-${cta ? `<a href="${url}" style="display:inline-block;margin-top:24px;background:#111;color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:600">${cta}</a>
-<p style="color:#8a8a84;font-size:12px;margin-top:24px;word-break:break-all">Or paste this link: ${url}</p>` : ''}
-</div><p style="color:#8a8a84;font-size:12px;text-align:center;margin-top:20px">ArogyaKosh · Family health, organised.</p></div></body></html>`;
+<div style="font-weight:700;font-size:18px;color:#0b2239;margin-bottom:24px">arogya<span style="background:#2dd4bf;padding:0 4px;border-radius:4px">kosh</span></div>
+<div style="background:#fff;border:1px solid #e1e8ee;border-radius:16px;padding:32px">
+<h1 style="font-size:22px;margin:0 0 12px;color:#0b2239">${title}</h1>
+<div style="color:#2e4459;font-size:15px;line-height:1.6">${body}</div>
+${cta ? `<a href="${url}" style="display:inline-block;margin-top:24px;background:#0b2239;color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:600">${cta}</a>
+<p style="color:#7c93a6;font-size:12px;margin-top:24px;word-break:break-all">Or paste this link: ${url}</p>` : ''}
+</div><p style="color:#7c93a6;font-size:12px;text-align:center;margin-top:20px">ArogyaKosh · Family health, organised.</p></div></body></html>`;
 
 export const sendVerificationEmail = (user, raw) => {
   const url = `${env.client.url}/verify-email/${raw}`;
@@ -104,6 +104,11 @@ export const deleteAccount = async (userId) => {
     Member.deleteMany(q), Medicine.deleteMany(q), DoseLog.deleteMany(q), Vital.deleteMany(q),
     Record.deleteMany(q), Reminder.deleteMany(q), Vaccination.deleteMany(q), Expense.deleteMany(q),
     ShareLink.deleteMany(q),
+    // Care circle: this household's circle, and this user's seats in other circles.
+    CircleMember.deleteMany({ $or: [{ owner: userId }, { user: userId }] }),
+    CircleInvite.deleteMany(q),
+    Activity.deleteMany(q),
+    Notification.deleteMany({ $or: [{ owner: userId }, { user: userId }] }),
   ]);
   await User.deleteOne({ _id: userId });
   await fs.promises.rm(path.join(UPLOAD_ROOT, String(userId)), { recursive: true, force: true });

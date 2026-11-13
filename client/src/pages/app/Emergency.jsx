@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
-import QRCode from 'react-qr-code';
 import {
   LuPhone, LuHospital, LuDroplet, LuPill, LuPrinter, LuCopy, LuRefreshCw, LuExternalLink, LuCheck, LuChevronRight, LuShieldCheck, LuSiren,
 } from 'react-icons/lu';
@@ -13,7 +12,8 @@ import { Card, CardHeader, PageHeader, Avatar, Badge, ScoreRing, Skeleton } from
 import { ActionMenu, useConfirm } from '../../components/ui/Overlay';
 import { Switch } from '../../components/ui/Field';
 import Button from '../../components/ui/Button';
-import Logo from '../../components/ui/Logo';
+import { EmergencyArt } from '../../components/illustrations';
+import MedicalIdCard, { PrintableCard } from '../../components/MedicalIdCard';
 import { firstName, daysFromNow, toInputDate } from '../../lib/format';
 
 const NEARBY = [
@@ -23,27 +23,6 @@ const NEARBY = [
 ];
 
 const cardUrl = (m) => `${window.location.origin}/e/${m.emergencyToken}`;
-
-function WalletCard({ member }) {
-  return (
-    <div className="w-[340px] rounded-3xl border-2 border-ink bg-surface p-5 text-ink">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-2xs font-bold uppercase tracking-[0.18em] text-bad">Medical ID · Scan in emergency</p>
-          <p className="mt-1 font-display text-xl font-bold leading-tight">{member.name}</p>
-          <p className="text-xs text-ink-3">{member.age !== null ? `${member.age} yrs` : ''}{member.bloodGroup ? ` · Blood ${member.bloodGroup}` : ''}</p>
-        </div>
-        <div className="rounded-xl bg-white p-1.5"><QRCode value={cardUrl(member)} size={84} /></div>
-      </div>
-      <div className="mt-3 space-y-1 text-[11px] leading-snug">
-        <p><b>Allergies:</b> {member.allergies.map((a) => a.name).join(', ') || (member.noKnownAllergies ? 'None known' : '—')}</p>
-        <p><b>Conditions:</b> {member.conditions.filter((c) => c.status !== 'RESOLVED').map((c) => c.name).join(', ') || '—'}</p>
-        {member.emergencyContacts[0] && <p><b>Call:</b> {member.emergencyContacts[0].name} {member.emergencyContacts[0].phone}</p>}
-      </div>
-      <div className="mt-3 flex items-center justify-between border-t border-line pt-2"><Logo size="sm" mark={false} /><span className="text-[10px] text-ink-3">Ambulance 108 · Emergency 112</span></div>
-    </div>
-  );
-}
 
 function MemberCard({ member, onPrint }) {
   const confirm = useConfirm();
@@ -59,24 +38,23 @@ function MemberCard({ member, onPrint }) {
   };
 
   return (
-    <Card className="flex flex-col p-5">
-      <div className="flex items-start justify-between gap-3">
+    <Card className="flex flex-col p-4 sm:p-5">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Avatar name={member.name} color={member.color} />
+          <Avatar name={member.name} color={member.color} size="sm" />
           <div>
-            <p className="font-semibold">{member.name}</p>
-            <p className="text-xs text-ink-3">{member.bloodGroup ? `Blood ${member.bloodGroup}` : 'Blood group missing'}</p>
+            <p className="text-sm font-semibold">{member.name}</p>
+            <p className="text-xs text-ink-3">Tap the card to see the back</p>
           </div>
         </div>
         <ActionMenu items={[
-          { label: 'Open public card', icon: LuExternalLink, onClick: () => window.open(url, '_blank') },
+          { label: 'Open what a scan shows', icon: LuExternalLink, onClick: () => window.open(url, '_blank') },
           { label: 'Copy link', icon: LuCopy, onClick: () => { navigator.clipboard.writeText(url); toast.success('Link copied'); } },
           { label: 'Reset QR code', icon: LuRefreshCw, onClick: rotate },
         ]} />
       </div>
-      <div className={clsx('mx-auto my-5 rounded-2xl border border-line bg-white p-3', !member.emergencyEnabled && 'opacity-25')}>
-        <QRCode value={url} size={148} />
-      </div>
+      <MedicalIdCard member={member} url={url} disabled={!member.emergencyEnabled} />
+      <div className="h-4" />
       {missing.length > 0 && (
         <Link to={`/app/family/${member._id}?edit=${!member.bloodGroup ? 'basics' : !member.emergencyContacts.length ? 'contacts' : 'medical'}`} className="mb-3 flex items-center gap-2 rounded-xl bg-warn-soft px-3 py-2 text-xs font-medium text-warn">
           Missing: {missing.join(', ')}<LuChevronRight className="ml-auto h-3.5 w-3.5" />
@@ -166,9 +144,9 @@ export default function Emergency() {
 
   return (
     <div>
-      {printing && <div className="hidden print:block"><WalletCard member={printing} /><p className="mt-3 text-xs">Cut along the border and keep it in the wallet. Scan the QR to see current details.</p></div>}
+      {printing && <div className="hidden print:block"><PrintableCard member={printing} url={cardUrl(printing)} /></div>}
       <div className="no-print">
-        <PageHeader title="Emergency" subtitle="When minutes matter: numbers, nearby help, and medical ID cards anyone can scan." />
+        <div className="relative"><EmergencyArt className="pointer-events-none absolute -top-6 right-0 hidden h-36 md:block" /><PageHeader title="Emergency" subtitle="When minutes matter: numbers, nearby help, and medical ID cards anyone can scan." /></div>
 
         <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <a href="tel:112" className="flex items-center gap-4 rounded-3xl bg-bad p-5 text-white transition-transform hover:-translate-y-0.5">
@@ -190,10 +168,10 @@ export default function Emergency() {
         <div className="mb-4 flex items-end justify-between">
           <div>
             <h2 className="text-xl font-semibold">Medical ID cards</h2>
-            <p className="mt-1 text-sm text-ink-3">Scanning shows blood group, allergies, conditions, medicines and who to call — nothing else. No app or login needed.</p>
+            <p className="mt-1 text-sm text-ink-3">Wallet-size cards with a live QR. Scanning shows blood group, allergies, conditions, medicines and who to call — nothing else. No app or login needed. Print one for every wallet and keep a copy on the fridge.</p>
           </div>
         </div>
-        <div className="mb-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mb-10 grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
           {ordered.map((m) => <MemberCard key={m._id} member={m} onPrint={setPrinting} />)}
         </div>
 

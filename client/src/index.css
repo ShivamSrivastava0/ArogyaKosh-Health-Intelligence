@@ -8,9 +8,9 @@
     @apply bg-paper text-ink font-sans antialiased;
     font-feature-settings: 'ss01', 'cv11';
   }
-  ::selection { background: #d4f25a; color: #121212; }
+  ::selection { background: #2dd4bf; color: #0B2239; }
   h1, h2, h3 { @apply font-display tracking-tight; }
-  :focus-visible { outline: 2px solid #121212; outline-offset: 2px; border-radius: 6px; }
+  :focus-visible { outline: 2px solid #0B2239; outline-offset: 2px; border-radius: 6px; }
   input[type='number']::-webkit-inner-spin-button { opacity: 0.4; }
   .tnum { font-variant-numeric: tabular-nums; }
 }
@@ -20,7 +20,7 @@
   .label { @apply block text-[13px] font-medium text-ink-2 mb-1.5; }
   .input {
     @apply w-full h-11 rounded-xl border border-line bg-surface px-3.5 text-[15px] text-ink placeholder:text-ink-4
-      transition-colors hover:border-ink-4 focus:outline-none focus:border-ink focus:ring-4 focus:ring-lime/50
+      transition-colors hover:border-ink-4 focus:outline-none focus:border-ink focus:ring-4 focus:ring-lime/35
       disabled:bg-paper disabled:text-ink-3;
   }
   .input-error { @apply border-bad focus:border-bad focus:ring-bad/15; }
@@ -29,13 +29,33 @@
   .scrollbar-none { scrollbar-width: none; }
   .scrollbar-none::-webkit-scrollbar { display: none; }
   .bg-grid {
-    background-image: linear-gradient(#e7e5de 1px, transparent 1px), linear-gradient(90deg, #e7e5de 1px, transparent 1px);
+    background-image: linear-gradient(#e1e8ee 1px, transparent 1px), linear-gradient(90deg, #e1e8ee 1px, transparent 1px);
     background-size: 44px 44px;
   }
-  .bg-dots { background-image: radial-gradient(#d9d7cf 1px, transparent 1px); background-size: 18px 18px; }
+  .bg-dots { background-image: radial-gradient(#cbd8e2 1px, transparent 1px); background-size: 18px 18px; }
 }
 
+/* Medical ID card effects */
+.holo {
+  background: linear-gradient(115deg, #ff9a9e, #fad0c4, #a1c4fd, #c2e9fb, #d4fc79, #ff9a9e);
+  background-size: 300% 300%;
+  animation: holo 6s ease-in-out infinite;
+}
+@keyframes holo { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+.shine::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.45) 50%, transparent 60%);
+  transform: translateX(-100%);
+  animation: shine 1.4s 0.35s cubic-bezier(.2, .8, .2, 1) both;
+}
+@keyframes shine { to { transform: translateX(100%); } }
+.card-in { animation: card-in 0.7s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes card-in { from { opacity: 0; transform: translateY(16px) rotateX(18deg); } to { opacity: 1; transform: none; } }
+
 @media print {
+  .print-card-sheet, .print-card-sheet * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { background: #fff !important; }
   .no-print { display: none !important; }
   .print-plain { box-shadow: none !important; border-color: #ddd !important; }

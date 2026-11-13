@@ -5,6 +5,7 @@ import Vaccination from '../models/Vaccination.js';
 import { latestVitals } from './vitalService.js';
 import { scheduleText, stockInfo } from './medicineService.js';
 import { chat, isAiEnabled, SAFETY_RULES } from './aiService.js';
+import { predictHousehold } from './predictService.js';
 import { VITALS, formatVital } from '../data/vitals.js';
 
 const EMERGENCY_RE = /(chest pain|can'?t breathe|cannot breathe|breathless|unconscious|fainted|stroke|face droop|slurred|heavy bleeding|seizure|suicid|kill myself|overdose|poison)/i;
@@ -33,7 +34,8 @@ const loadContext = async (ownerId) => {
     Vaccination.find({ owner: ownerId, givenDate: null, dueDate: { $lte: in60 } }).sort({ dueDate: 1 }),
     latestVitals(ownerId),
   ]);
-  return { members, meds, reminders, vaccines, vitals };
+  const pred = await predictHousehold(ownerId).catch(() => null);
+  return { members, meds, reminders, vaccines, vitals, pred };
 };
 
 const contextText = ({ members, meds, reminders, vaccines, vitals }) => members.map((m) => {
@@ -68,6 +70,20 @@ const offlineAnswer = (message, ctx) => {
   const scope = targets.length ? targets : ctx.members;
   const who = (m) => (m.isSelf ? 'You' : m.name);
 
+  if (/(risk|heart age|predict|forecast|trend|future|chance|kidney|egfr|prediabet)/.test(q) && ctx.pred) {
+    const rows = ctx.pred.members.filter((r) => scope.some((m) => String(m._id) === String(r.member._id)));
+    const lines = rows.map((r) => {
+      const ins = ctx.pred.insights.filter((i) => String(i.member._id) === String(r.member._id)).slice(0, 3);
+      return [
+        `**${r.member.isSelf ? 'You' : r.member.name}**`,
+        r.cardio ? `- 10-year heart risk **${r.cardio.risk}%** (${r.cardio.band.toLowerCase()}), heart age **${r.cardio.heartAge >= 80 ? "80+" : r.cardio.heartAge}**` : '- Heart risk: needs BP, height/weight and age',
+        r.glycaemic ? `- Sugar: ${r.glycaemic.label}` : null,
+        r.kidney ? `- Kidney: eGFR ${r.kidney.egfr} (${r.kidney.label.toLowerCase()})` : null,
+        ...ins.map((i) => `- ${i.title}`),
+      ].filter(Boolean).join('\n');
+    });
+    return `${lines.join('\n\n')}\n\n_Estimates from validated risk models and your own readings — not a diagnosis._`;
+  }
   if (/(medicine|tablet|pill|dose|medication|dawai|capsule)/.test(q)) {
     const lines = scope.map((m) => {
       const list = ctx.meds.filter((x) => String(x.member) === String(m._id));
@@ -113,15 +129,43 @@ const offlineAnswer = (message, ctx) => {
 _Smart (AI) answers are turned off on this server, so I can only answer from your saved records._`;
 };
 
+/**
+ * Grounding check for AI replies: every health value the model states (a
+ * number with a clinical unit) must exist in the records it was given. Values
+ * that don't are reported back so the UI can warn instead of presenting them
+ * as fact. General-knowledge ranges ("below 120/80") are allowed via the
+ * reference list.
+ */
+const UNIT_RE = /(\d+(?:\.\d+)?)(?:\s*\/\s*(\d+(?:\.\d+)?))?\s*(mg\/dL|mmHg|%|kg|bpm|mIU\/L|ng\/mL|pg\/mL|g\/dL|mL\/min|years?|yrs?)/gi;
+const REFERENCE_NUMBERS = new Set(['120', '80', '130', '140', '90', '70', '99', '100', '126', '200', '5.7', '6.5', '7', '8', '150', '40', '50', '60', '95', '10', '20', '30', '18.5', '23', '25', '7.5', '0.4', '4']);
+export const verifyNumbers = (reply, context) => {
+  const known = new Set((context.match(/\d+(?:\.\d+)?/g) || []).map((n) => String(Number(n))));
+  const stated = [];
+  const unverified = [];
+  for (const m of reply.matchAll(UNIT_RE)) {
+    const nums = [m[1], m[2]].filter(Boolean).map((n) => String(Number(n)));
+    // Textbook thresholds are only accepted when phrased as one ("below 120/80").
+    const before = reply.slice(Math.max(0, m.index - 32), m.index).toLowerCase();
+    const isThreshold = /(below|under|above|over|less than|more than|at least|target|normal|goal|aim|range|<|>|≤|≥)\s*\S*\s*$/.test(before);
+    const ok = nums.every((n) => known.has(n) || (isThreshold && REFERENCE_NUMBERS.has(n)));
+    stated.push(m[0]);
+    if (!ok) unverified.push(m[0].trim());
+  }
+  return { checked: stated.length, unverified: [...new Set(unverified)] };
+};
+
 export const answer = async (ownerId, { message, history = [] }) => {
   if (EMERGENCY_RE.test(message)) return { reply: EMERGENCY_REPLY, mode: 'safety' };
   const ctx = await loadContext(ownerId);
 
   if (isAiEnabled()) {
     try {
-      const system = `You are Kosh, the assistant inside ArogyaKosh, a family health organiser app.\n${SAFETY_RULES}\n\nToday is ${new Date().toDateString()}.\nFamily records:\n${contextText(ctx)}`;
+      const { pred } = ctx;
+      const predText = pred ? pred.insights.slice(0, 10).map((i) => `- ${i.member.name}: ${i.title}. ${i.detail}`).join('\n') : '';
+      const radar = pred ? pred.members.map((m) => `- ${m.member.name}: ${m.cardio ? `10-yr heart risk ${m.cardio.risk}% (${m.cardio.band}), heart age ${m.cardio.heartAge}` : 'heart risk n/a'}${m.glycaemic ? `; ${m.glycaemic.label}` : ''}${m.kidney ? `; eGFR ${m.kidney.egfr}` : ''}`).join('\n') : '';
+      const system = `You are Kosh, the assistant inside ArogyaKosh, a predictive family health app.\n${SAFETY_RULES}\n- Predictions below come from validated risk models (Framingham, CKD-EPI) and trend forecasts on the family's own readings. Explain them simply and say they are estimates.\n\nToday is ${new Date().toDateString()}.\nFamily records:\n${contextText(ctx)}\n\nArogyaPredict risk summary:\n${radar}\n\nArogyaPredict insights:\n${predText}`;
       const reply = await chat({ system, history, message });
-      if (reply) return { reply, mode: 'ai' };
+      if (reply) return { reply, mode: 'ai', verification: verifyNumbers(reply, `${system}\n${history.map((h) => h.content).join('\n')}\n${message}`) };
     } catch (err) {
       console.warn('[assistant] AI unavailable, falling back:', err.message);
     }

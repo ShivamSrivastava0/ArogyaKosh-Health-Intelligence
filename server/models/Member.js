@@ -24,6 +24,7 @@ const memberSchema = new Schema(
     bloodGroup: opt(BLOOD_GROUPS),
     heightCm: { type: Number, min: 30, max: 260, default: null },
     weightKg: { type: Number, min: 1, max: 400, default: null },
+    waistCm: { type: Number, min: 30, max: 250, default: null },
     phone: { type: String, trim: true, default: '' },
 
     allergies: [{ name: { type: String, required: true, trim: true }, severity: { type: String, enum: SEVERITIES, default: 'MODERATE' }, reaction: { type: String, trim: true, default: '' } }],
@@ -64,6 +65,10 @@ memberSchema.index({ owner: 1, isSelf: 1 });
 
 memberSchema.pre('validate', function assignToken(next) {
   if (!this.emergencyToken) this.emergencyToken = crypto.randomBytes(9).toString('base64url');
+  if (this.dob) {
+    if (this.dob.getTime() > Date.now() + 86400000) this.invalidate('dob', 'Date of birth cannot be in the future');
+    else if (this.dob.getFullYear() < 1900) this.invalidate('dob', 'Please check the date of birth');
+  }
   next();
 });
 

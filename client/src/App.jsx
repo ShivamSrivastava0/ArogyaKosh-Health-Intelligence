@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { FamilyProvider } from './context/FamilyContext';
+import { HouseholdProvider } from './context/HouseholdContext';
 import { QuickAddProvider } from './context/QuickAddContext';
 import AppShell from './components/layout/AppShell';
 import { PageSkeleton } from './components/ui/Display';
@@ -14,6 +15,9 @@ const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
 const VerifyEmail = lazy(() => import('./pages/auth/VerifyEmail'));
 const Today = lazy(() => import('./pages/app/Today'));
+const Predict = lazy(() => import('./pages/app/Predict'));
+const Circle = lazy(() => import('./pages/app/Circle'));
+const AcceptInvite = lazy(() => import('./pages/public/AcceptInvite'));
 const Family = lazy(() => import('./pages/app/Family'));
 const MemberDetail = lazy(() => import('./pages/app/MemberDetail'));
 const Brief = lazy(() => import('./pages/app/Brief'));
@@ -40,11 +44,13 @@ function RequireAuth() {
   if (status === 'loading') return <FullScreenLoader />;
   if (status !== 'authed') return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   return (
+    <HouseholdProvider>
     <FamilyProvider>
       <QuickAddProvider>
         <AppShell />
       </QuickAddProvider>
     </FamilyProvider>
+    </HouseholdProvider>
   );
 }
 
@@ -69,10 +75,13 @@ export default function App() {
         <Route path="/verify-email/:token" element={<VerifyEmail />} />
         <Route path="/e/:token" element={<PublicEmergency />} />
         <Route path="/s/:token" element={<PublicShare />} />
+        <Route path="/invite/:token" element={<AcceptInvite />} />
 
         <Route path="/app" element={<RequireAuth />}>
           <Route element={<Suspense fallback={<PageSkeleton />}><Outlet /></Suspense>}>
             <Route index element={<Today />} />
+            <Route path="predict" element={<Predict />} />
+            <Route path="circle" element={<Circle />} />
             <Route path="family" element={<Family />} />
             <Route path="family/:id" element={<MemberDetail />} />
             <Route path="family/:id/brief" element={<Brief />} />

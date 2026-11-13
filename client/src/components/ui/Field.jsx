@@ -148,7 +148,7 @@ export function TagInput({ label, value = [], onChange, placeholder, hint }) {
   };
   return (
     <Field label={label} hint={hint}>
-      <div className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-xl border border-line bg-surface px-2 py-1.5 focus-within:border-ink focus-within:ring-4 focus-within:ring-lime/50">
+      <div className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-xl border border-line bg-surface px-2 py-1.5 focus-within:border-ink focus-within:ring-4 focus-within:ring-lime/35">
         {value.map((t) => (
           <span key={t} className="inline-flex items-center gap-1 rounded-full bg-paper px-2.5 py-1 text-xs font-medium">
             {t}

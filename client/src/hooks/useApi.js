@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { api, errorMessage } from '../api/client';
 
 /**
@@ -89,24 +89,4 @@ export function useApi(path, params, { enabled = true } = {}) {
     refreshing: Boolean(snapshot?.promise && snapshot?.data),
     reload,
   };
-}
-
-/** Wraps a mutation with pending state; invalidates prefixes on success. */
-export function useMutation(fn, { invalidates = [], onSuccess, onError } = {}) {
-  const [pending, setPending] = useState(false);
-  const mutate = useCallback(async (...args) => {
-    setPending(true);
-    try {
-      const result = await fn(...args);
-      if (invalidates.length) await invalidate(...invalidates);
-      onSuccess?.(result, ...args);
-      return result;
-    } catch (err) {
-      onError?.(errorMessage(err), err);
-      throw err;
-    } finally {
-      setPending(false);
-    }
-  }, [fn, onSuccess, onError, invalidates]); // eslint-disable-line react-hooks/exhaustive-deps
-  return { mutate, pending };
 }

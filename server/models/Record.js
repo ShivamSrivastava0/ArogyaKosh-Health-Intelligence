@@ -22,9 +22,16 @@ const recordSchema = new Schema(
       size: { type: Number, default: 0 },
     },
     summary: { type: String, default: '' },
+    // 'AI' summaries are machine-written and shown with a verify-against-report label.
+    summarySource: { type: String, enum: ['USER', 'AI'], default: 'USER' },
   },
   { timestamps: true }
 );
+
+recordSchema.pre('validate', function checkDate(next) {
+  if (this.date && this.date.getTime() > Date.now() + 86400000) this.invalidate('date', 'A record cannot be dated in the future');
+  next();
+});
 
 recordSchema.index({ owner: 1, date: -1 });
 recordSchema.index({ owner: 1, title: 'text', doctor: 'text', facility: 'text', tags: 'text' });

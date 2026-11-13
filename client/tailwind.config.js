@@ -4,18 +4,23 @@ export default {
   theme: {
     extend: {
       colors: {
-        paper: '#F6F5F1',
+        // Clinical-but-warm palette: deep navy text, teal-mint brand accent,
+        // cool off-white canvas. ("lime" is kept as the token name for the brand accent.)
+        paper: '#F3F7F9',
         surface: '#FFFFFF',
-        ink: { DEFAULT: '#121212', 2: '#3A3A36', 3: '#6B6B65', 4: '#A2A29B' },
-        line: { DEFAULT: '#E7E5DE', soft: '#F0EEE8' },
-        lime: { DEFAULT: '#D4F25A', soft: '#EFF9C9', deep: '#4F6B00' },
-        ok: { DEFAULT: '#1E8E4E', soft: '#E2F4E8' },
-        warn: { DEFAULT: '#B86E00', soft: '#FFF0D3' },
-        bad: { DEFAULT: '#D0372A', soft: '#FDE6E2' },
-        info: { DEFAULT: '#2D63D8', soft: '#E4ECFC' },
+        ink: { DEFAULT: '#0B2239', 2: '#2E4459', 3: '#5F7385', 4: '#9AABB9' },
+        line: { DEFAULT: '#E1E8EE', soft: '#EDF2F5' },
+        lime: { DEFAULT: '#2DD4BF', soft: '#DDF7F2', deep: '#0F766E' },
+        brand: { DEFAULT: '#0F766E', 600: '#0D9488', 400: '#2DD4BF', 100: '#CCFBF1', 50: '#F0FDFA' },
+        sky: { DEFAULT: '#2F80ED', soft: '#E3EFFD' },
+        coral: { DEFAULT: '#FF7A6B', soft: '#FFE9E5' },
+        ok: { DEFAULT: '#14866D', soft: '#DCF5EC' },
+        warn: { DEFAULT: '#B45309', soft: '#FEF1DC' },
+        bad: { DEFAULT: '#D63A44', soft: '#FDE7E9' },
+        info: { DEFAULT: '#2F6FE0', soft: '#E3EDFC' },
         tint: {
-          lime: '#E6F7A6', sky: '#CFE4FF', peach: '#FFD9C2', lilac: '#E3D9FF',
-          mint: '#C9F0DC', sun: '#FFEDA6', rose: '#FFD3DE', sand: '#ECE2D0',
+          lime: '#C9F2EA', sky: '#D4E6FF', peach: '#FFDCCD', lilac: '#E4DEFF',
+          mint: '#CDEFE0', sun: '#FFF0BF', rose: '#FFD8E1', sand: '#EAE3D6',
         },
       },
       fontFamily: {
@@ -33,9 +38,9 @@ export default {
         '4xl': '2rem',
       },
       boxShadow: {
-        card: '0 1px 0 rgba(18,18,18,0.03), 0 1px 3px rgba(18,18,18,0.04)',
-        pop: '0 12px 32px -8px rgba(18,18,18,0.18), 0 2px 6px rgba(18,18,18,0.06)',
-        ring: '0 0 0 4px rgba(212,242,90,0.55)',
+        card: '0 1px 0 rgba(11,34,57,0.03), 0 1px 3px rgba(11,34,57,0.05)',
+        pop: '0 14px 36px -10px rgba(11,34,57,0.22), 0 2px 6px rgba(11,34,57,0.06)',
+        ring: '0 0 0 4px rgba(45,212,191,0.35)',
       },
       keyframes: {
         'fade-up': { from: { opacity: 0, transform: 'translateY(6px)' }, to: { opacity: 1, transform: 'none' } },

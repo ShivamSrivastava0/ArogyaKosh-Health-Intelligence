@@ -32,7 +32,7 @@ export const { list: listExpenses, create: createExpense, update: updateExpense,
 export const summary = asyncHandler(async (req, res) => {
   const to = req.query.to ? new Date(req.query.to) : new Date();
   const from = req.query.from ? new Date(req.query.from) : new Date(to.getFullYear(), to.getMonth() - 11, 1);
-  const match = { owner: new mongoose.Types.ObjectId(String(req.user._id)), date: { $gte: from, $lte: to } };
+  const match = { owner: new mongoose.Types.ObjectId(String(req.ownerId)), date: { $gte: from, $lte: to } };
 
   const [byMonth, byCategory, byMember, totals] = await Promise.all([
     Expense.aggregate([{ $match: match }, { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$date' } }, total: { $sum: '$amount' } } }, { $sort: { _id: 1 } }]),
