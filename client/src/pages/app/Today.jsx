@@ -46,7 +46,7 @@ function DoseRow({ dose, isToday, isFuture, onSet, me }) {
           {dose.medicine.mealTiming !== 'ANY' && <><span>·</span><span>{MEAL_TIMING[dose.medicine.mealTiming]}</span></>}
           {dose.medicine.dose !== 1 && <><span>·</span><span>×{dose.medicine.dose}</span></>}
           {late && <Badge tone="warn">Due</Badge>}
-          {dose.byName && dose.status !== "PENDING" && <><span>·</span><span>by {dose.byName === me ? "you" : firstName(dose.byName)}</span></>}
+          {dose.byName && dose.status !== "PENDING" && <><span>·</span><span>by {dose.byName === me ? "you" : / via WhatsApp$/.test(dose.byName) ? `${firstName(dose.byName)} on WhatsApp` : firstName(dose.byName)}</span></>}
           {dose.medicine.stock?.low && <Badge tone="bad">{dose.medicine.stock.stock} left</Badge>}
           {dose.missRisk && <span title="ArogyaPredict learned this dose is often missed — set an alarm"><Badge tone="info"><LuBrainCircuit className="h-3 w-3" />{dose.missRisk}% likely missed</Badge></span>}
         </p>

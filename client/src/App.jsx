@@ -17,6 +17,10 @@ const VerifyEmail = lazy(() => import('./pages/auth/VerifyEmail'));
 const Today = lazy(() => import('./pages/app/Today'));
 const Predict = lazy(() => import('./pages/app/Predict'));
 const Circle = lazy(() => import('./pages/app/Circle'));
+const FamilyTree = lazy(() => import('./pages/app/FamilyTree'));
+const Admission = lazy(() => import('./pages/app/Admission'));
+const WhatsApp = lazy(() => import('./pages/app/WhatsApp'));
+const Abha = lazy(() => import('./pages/app/Abha'));
 const AcceptInvite = lazy(() => import('./pages/public/AcceptInvite'));
 const Family = lazy(() => import('./pages/app/Family'));
 const MemberDetail = lazy(() => import('./pages/app/MemberDetail'));
@@ -82,6 +86,11 @@ export default function App() {
             <Route index element={<Today />} />
             <Route path="predict" element={<Predict />} />
             <Route path="circle" element={<Circle />} />
+            <Route path="family-tree" element={<FamilyTree />} />
+            <Route path="admission" element={<Admission />} />
+            <Route path="whatsapp" element={<WhatsApp />} />
+            <Route path="abha" element={<Abha />} />
+            <Route path="admission/:memberId" element={<Admission />} />
             <Route path="family" element={<Family />} />
             <Route path="family/:id" element={<MemberDetail />} />
             <Route path="family/:id/brief" element={<Brief />} />

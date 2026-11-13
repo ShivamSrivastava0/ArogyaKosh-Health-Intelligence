@@ -22,7 +22,7 @@ const SECTIONS = [
 const TINT = { lime: 'bg-tint-lime', sky: 'bg-tint-sky', peach: 'bg-tint-peach', lilac: 'bg-tint-lilac', mint: 'bg-tint-mint', sun: 'bg-tint-sun', rose: 'bg-tint-rose', sand: 'bg-tint-sand' };
 
 const blank = () => ({
-  name: '', relation: 'FATHER', dob: '', gender: '', bloodGroup: '', heightCm: '', weightKg: '', waistCm: '', phone: '', color: '',
+  name: '', relation: 'FATHER', lineage: '', dob: '', gender: '', bloodGroup: '', heightCm: '', weightKg: '', waistCm: '', phone: '', color: '', address: '', occupation: '', idProof: { type: '', last4: '' }, abha: { number: '', address: '' },
   allergies: [], noKnownAllergies: false, conditions: [], emergencyContacts: [],
   doctor: { name: '', specialty: '', phone: '', clinic: '' }, insurance: [],
   lifestyle: { smoking: '', alcohol: '', activity: '', diet: '', sleepHours: '' }, organDonor: false, notes: '',
@@ -32,6 +32,8 @@ const fromMember = (m) => ({
   ...blank(),
   ...m,
   dob: toInputDate(m.dob),
+  idProof: { type: m.idProof?.type || '', last4: m.idProof?.last4 || '' },
+  abha: { number: m.abha?.number || '', address: m.abha?.address || '' },
   heightCm: m.heightCm ?? '', weightKg: m.weightKg ?? '', waistCm: m.waistCm ?? '',
   doctor: { ...blank().doctor, ...(m.doctor || {}) },
   lifestyle: { ...blank().lifestyle, ...(m.lifestyle || {}), sleepHours: m.lifestyle?.sleepHours ?? '' },
@@ -73,16 +75,17 @@ export default function MemberForm({ open, onClose, member, section = 'basics', 
     const body = {
       name: s.name.trim(), dob: s.dob || null, gender: s.gender, bloodGroup: s.bloodGroup,
       heightCm: num(s.heightCm), weightKg: num(s.weightKg), waistCm: num(s.waistCm), phone: s.phone,
+      address: s.address || '', occupation: s.occupation || '', idProof: s.idProof, abha: s.abha,
       allergies: s.allergies.filter((a) => a.name?.trim()), noKnownAllergies: s.noKnownAllergies && !s.allergies.length,
       conditions: s.conditions.filter((c) => c.name?.trim()).map((c) => ({ ...c, since: c.since || null })),
       emergencyContacts: s.emergencyContacts.filter((c) => c.name?.trim() && c.phone?.trim()),
       doctor: s.doctor, insurance: s.insurance.filter((i) => i.provider?.trim()).map((i) => ({ ...i, validTill: i.validTill || null, sumInsured: num(i.sumInsured) })),
       lifestyle: { ...s.lifestyle, sleepHours: num(s.lifestyle.sleepHours) }, organDonor: s.organDonor, notes: s.notes,
     };
-    if (!member?.isSelf) body.relation = s.relation;
+    if (!member?.isSelf) { body.relation = s.relation; body.lineage = ['GRANDFATHER', 'GRANDMOTHER'].includes(s.relation) ? (s.lineage || '') : ''; }
     if (s.color) body.color = s.color;
     const res = editing ? await api.patch(`/members/${member._id}`, body) : await api.post('/members', body);
-    await invalidate('/members', '/today', '/readiness', '/scores', '/vaccines');
+    await invalidate('/members', '/today', '/readiness', '/scores', '/vaccines', '/family-tree', '/predict');
     onSaved?.(res.member, res);
     onClose();
     return res;
@@ -106,6 +109,10 @@ export default function MemberForm({ open, onClose, member, section = 'basics', 
               <Select label="Relation" value={v.relation} onChange={set('relation')} options={Object.entries(RELATIONS).filter(([k]) => k !== 'SELF')} />
             )}
           </div>
+          {['GRANDFATHER', 'GRANDMOTHER'].includes(v.relation) && (
+            <Select label="Which side of the family?" value={v.lineage || ''} onChange={set('lineage')} placeholder="Select"
+              options={[['PATERNAL', "Father's side"], ['MATERNAL', "Mother's side"]]} hint="Places them correctly in the Family Health Tree" />
+          )}
           <div className="grid gap-4 sm:grid-cols-3">
             <Input label="Date of birth" type="date" value={v.dob} onChange={set('dob')} hint={!editing ? 'Used to build the vaccine schedule' : undefined} />
             <Select label="Gender" value={v.gender} onChange={set('gender')} options={GENDERS} placeholder="Select" />
@@ -116,6 +123,20 @@ export default function MemberForm({ open, onClose, member, section = 'basics', 
             <Input label="Weight" type="number" step="0.1" value={v.weightKg} onChange={set('weightKg')} suffix="kg" />
             <Input label="Waist" optional type="number" value={v.waistCm} onChange={set('waistCm')} suffix="cm" hint="At the navel. Powers diabetes risk." />
             <Input label="Phone" optional type="tel" value={v.phone} onChange={set('phone')} />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Input label="Address" optional value={v.address} onChange={set('address')} className="sm:col-span-2" hint="Asked on hospital admission forms" />
+            <Input label="Occupation" optional value={v.occupation} onChange={set('occupation')} />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Select label="Photo ID" optional value={v.idProof.type} onChange={setNested('idProof', 'type')} placeholder="None"
+              options={[['AADHAAR', 'Aadhaar'], ['PAN', 'PAN'], ['PASSPORT', 'Passport'], ['VOTER_ID', 'Voter ID'], ['DRIVING_LICENCE', 'Driving licence']]} />
+            <Input label="Last 4 characters" optional maxLength={4} value={v.idProof.last4} onChange={(e) => setNested('idProof', 'last4')(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 4))}
+              hint="We never store the full ID number" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input label="ABHA number" optional placeholder="91-1234-5678-9012" value={v.abha.number} onChange={setNested('abha', 'number')} hint="14-digit Ayushman Bharat Health Account number" />
+            <Input label="ABHA address" optional placeholder="name@abdm" value={v.abha.address} onChange={setNested('abha', 'address')} />
           </div>
           <Field label="Colour">
             <div className="flex gap-2">
@@ -186,13 +207,17 @@ export default function MemberForm({ open, onClose, member, section = 'basics', 
           <div>
             <p className="mb-3 text-sm font-semibold">Health insurance</p>
             <ListEditor items={v.insurance} onChange={set('insurance')} addLabel="Add policy" empty="No policies saved. We'll remind you before renewal."
-              make={() => ({ provider: '', policyNumber: '', sumInsured: '', validTill: '', helpline: '' })}
+              make={() => ({ provider: '', policyNumber: '', sumInsured: '', validTill: '', helpline: '', tpa: '', cardId: '', policyHolder: '', employeeId: '' })}
               render={(p, up) => (
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Input placeholder="Insurer & plan" value={p.provider} onChange={(e) => up({ provider: e.target.value })} aria-label="Insurer" />
                   <Input placeholder="Policy number" value={p.policyNumber} onChange={(e) => up({ policyNumber: e.target.value })} aria-label="Policy number" />
                   <Input placeholder="Sum insured" type="number" prefix="₹" value={p.sumInsured} onChange={(e) => up({ sumInsured: e.target.value })} aria-label="Sum insured" />
                   <Input type="date" value={p.validTill} onChange={(e) => up({ validTill: e.target.value })} aria-label="Valid till" hint="Valid till" />
+                  <Input placeholder="Member / insured ID on the e-card" value={p.cardId || ''} onChange={(e) => up({ cardId: e.target.value })} aria-label="Insured card ID" />
+                  <Input placeholder="TPA (e.g. Medi Assist)" value={p.tpa || ''} onChange={(e) => up({ tpa: e.target.value })} aria-label="TPA" />
+                  <Input placeholder="Policy holder name" value={p.policyHolder || ''} onChange={(e) => up({ policyHolder: e.target.value })} aria-label="Policy holder" />
+                  <Input placeholder="Employee ID (group policy)" value={p.employeeId || ''} onChange={(e) => up({ employeeId: e.target.value })} aria-label="Employee ID" />
                   <Input placeholder="Claims helpline" type="tel" value={p.helpline} onChange={(e) => up({ helpline: e.target.value })} aria-label="Helpline" className="sm:col-span-2" />
                 </div>
               )} />

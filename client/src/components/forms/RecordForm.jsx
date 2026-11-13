@@ -24,11 +24,11 @@ const guessCategory = (name = '') => {
   return 'OTHER';
 };
 
-export default function RecordForm({ open, onClose, record, defaultMember, onSaved }) {
+export default function RecordForm({ open, onClose, record, defaultMember, defaultCategory, onSaved }) {
   const editing = Boolean(record?._id);
   const init = () => (record
     ? { ...record, member: record.member?._id || record.member, date: toInputDate(record.date), tags: record.tags || [] }
-    : { member: defaultMember || '', title: '', category: 'LAB_REPORT', date: todayKey(), doctor: '', facility: '', tags: [], notes: '' });
+    : { member: defaultMember || '', title: '', category: defaultCategory || 'LAB_REPORT', date: todayKey(), doctor: '', facility: '', tags: [], notes: '' });
   const { values: v, set, setValues, errors, saving, submit } = useForm(init());
   const [file, setFile] = useState(null);
   const [progress, setProgress] = useState(0);
@@ -44,7 +44,7 @@ export default function RecordForm({ open, onClose, record, defaultMember, onSav
     setValues((s) => ({
       ...s,
       title: s.title || f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').slice(0, 80),
-      category: s.title ? s.category : guessCategory(f.name),
+      category: s.title || defaultCategory ? s.category : guessCategory(f.name),
     }));
   };
 

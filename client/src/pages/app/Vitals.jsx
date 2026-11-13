@@ -111,6 +111,7 @@ export function VitalsPanel({ memberId, initialType }) {
               <span className="flex flex-wrap items-center gap-1.5 text-[13px] text-ink-3">
                 {r.source === 'REPORT_AI' ? <Badge tone="info" className="font-medium">Read from report by AI · you confirmed</Badge>
                   : r.source === 'REPORT_MANUAL' ? <Badge className="font-medium">From report</Badge>
+                  : r.source === 'ABDM' ? <Badge tone="ok" className="font-medium">From hospital via ABHA</Badge>
                     : <Badge className="font-medium">Entered by you</Badge>}
                 {r.note && <span className="truncate">{r.note}</span>}
               </span>

@@ -53,4 +53,16 @@ export const env = {
   jobs: {
     enabled: process.env.JOBS_ENABLED !== 'false',
   },
+  // WhatsApp Business Cloud API (Meta). Without a token + phone number ID the app runs a simulator.
+  whatsapp: {
+    token: isPlaceholder(process.env.WHATSAPP_TOKEN) ? '' : process.env.WHATSAPP_TOKEN,
+    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || '',
+    verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || '',
+    appSecret: isPlaceholder(process.env.WHATSAPP_APP_SECRET) ? '' : process.env.WHATSAPP_APP_SECRET,
+    apiVersion: process.env.WHATSAPP_API_VERSION || 'v21.0',
+    // Approved message templates for business-initiated messages (outside the 24-hour window).
+    templateDose: process.env.WHATSAPP_TEMPLATE_DOSE || '',
+    templateOptIn: process.env.WHATSAPP_TEMPLATE_OPTIN || '',
+    templateLang: process.env.WHATSAPP_TEMPLATE_LANG || 'en',
+  },
 };

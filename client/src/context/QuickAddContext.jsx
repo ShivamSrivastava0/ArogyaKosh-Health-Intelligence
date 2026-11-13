@@ -23,7 +23,7 @@ export function QuickAddProvider({ children }) {
       {children}
       <MedicineForm open={state.kind === 'medicine'} onClose={close} medicine={p.medicine} defaultMember={p.member} />
       <VitalForm open={state.kind === 'vital'} onClose={close} defaultMember={p.member} defaultType={p.type} />
-      <RecordForm open={state.kind === 'record'} onClose={close} record={p.record} defaultMember={p.member} onSaved={p.onSaved} />
+      <RecordForm open={state.kind === 'record'} onClose={close} record={p.record} defaultMember={p.member} defaultCategory={p.category} onSaved={p.onSaved} />
       <ReminderForm open={state.kind === 'reminder'} onClose={close} reminder={p.reminder} defaultMember={p.member} />
       <ExpenseForm open={state.kind === 'expense'} onClose={close} expense={p.expense} defaultMember={p.member} />
       <VaccineForm open={state.kind === 'vaccine'} onClose={close} vaccine={p.vaccine} defaultMember={p.member} />

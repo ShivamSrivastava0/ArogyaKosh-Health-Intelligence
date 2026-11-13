@@ -20,7 +20,7 @@ export const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export const RECORD_CATEGORIES = {
   PRESCRIPTION: 'Prescription', LAB_REPORT: 'Lab report', IMAGING: 'Scan / X-ray', DISCHARGE_SUMMARY: 'Discharge summary',
-  VACCINATION: 'Vaccination', INSURANCE: 'Insurance', BILL: 'Bill / receipt', OTHER: 'Other',
+  VACCINATION: 'Vaccination', INSURANCE: 'Insurance', ID_PROOF: 'ID proof', BILL: 'Bill / receipt', OTHER: 'Other',
 };
 
 export const REMINDER_TYPES = {

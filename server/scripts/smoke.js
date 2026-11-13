@@ -230,6 +230,73 @@ try {
   console.log(`  assistant risk (${ask.data.mode}): ${ask.data.reply.replace(/\n/g, ' ').slice(0, 140)}`);
   const asst2 = await call('POST', '/assistant', { message: "what was papa's latest bp?" });
   console.log(`  assistant: ${asst2.data.reply.replace(/\n/g, ' ').slice(0, 160)}`);
+
+  // Family Health Tree
+  const treeRes = await call('GET', '/family-tree');
+  console.log(`  family tree: ${treeRes.data.nodes.length} people, plans ${treeRes.data.plans.map((p) => `${p.member.name.split(' ')[0]}=${p.items.length}`).join(', ')}`);
+
+  // Cashless admission kit: attach a real 2-page PDF and a PNG e-card, then build the merged kit.
+  const { PDFDocument } = await import('pdf-lib');
+  const twoPage = await PDFDocument.create(); twoPage.addPage(); twoPage.addPage();
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  for (const [title, category, blob, name] of [
+    ['CBC report', 'LAB_REPORT', new Blob([await twoPage.save()], { type: 'application/pdf' }), 'cbc.pdf'],
+    ['Star Health e-card', 'INSURANCE', new Blob([png], { type: 'image/png' }), 'card.png'],
+  ]) {
+    const f = new FormData();
+    f.append('member', papaId); f.append('title', title); f.append('category', category); f.append('file', blob, name);
+    await call('POST', '/records', null, { form: f });
+  }
+  const kitRes = await call('GET', `/members/${papaId}/admission-kit`);
+  const missing = kitRes.data.kit.checklist.filter((c) => !c.ok).map((c) => c.key);
+  console.log(`  admission kit: ready=${kitRes.data.kit.ready}, missing [${missing.join(', ')}], suggested ${kitRes.data.kit.documents.filter((d) => d.suggested).length} docs`);
+  const pdfRes = await fetch(`${base}/members/${papaId}/admission-kit/pdf`, { headers: { Authorization: `Bearer ${token}` } });
+  const kitBytes = await pdfRes.arrayBuffer();
+  if (process.env.SMOKE_SAVE_KIT) fs.writeFileSync(process.env.SMOKE_SAVE_KIT, Buffer.from(kitBytes));
+  const kitPdf = await PDFDocument.load(kitBytes);
+  const pages = kitPdf.getPageCount();
+  const okPdf = pdfRes.status === 200 && pages >= 4; // cover (1+) + 2 PDF pages + 1 image page
+  if (!okPdf) failures += 1;
+  console.log(`${okPdf ? '✓' : '✗'} admission kit PDF → ${pdfRes.status}, ${pages} pages`);
+
+  // WhatsApp dose check-off (simulator): consent → reminder → reply "1" logs the dose.
+  const momId = house.data.members.find((r) => r.member.relation === 'MOTHER').member._id;
+  await call('PUT', `/whatsapp/${papaId}`, { phone: '98200 33114', lang: 'hi' });
+  await call('PUT', `/whatsapp/${momId}`, { phone: '+91 98200 33114', lang: 'hi' }); // same phone as papa
+  const waBefore = await call('GET', '/whatsapp');
+  console.log(`  whatsapp: simulator=${waBefore.data.simulator}, ${waBefore.data.members.filter((m) => m.whatsapp?.status !== 'OFF').map((m) => `${m.name.split(' ')[0]}=${m.whatsapp.status}`).join(', ')}`);
+  const yes = await call('POST', `/whatsapp/${papaId}/simulate`, { text: 'haan' });
+  console.log(`  reply to "haan": ${yes.data.reply.split('\n')[0]}`);
+  const waAfter = await call('GET', '/whatsapp');
+  const activeCount = waAfter.data.members.filter((m) => m.whatsapp?.status === 'ACTIVE').length;
+  const test = await call('POST', `/whatsapp/${papaId}/test`, {}, { expect: [200, 400] });
+  if (test.success) {
+    console.log(`  reminder:\n    ${test.data.message.body.split('\n').join('\n    ')}`);
+    const one = await call('POST', `/whatsapp/${papaId}/simulate`, { text: '1' });
+    console.log(`  reply to "1": ${one.data.reply}`);
+    const feedAfter = await call('GET', `/today?date=${key}`);
+    const viaWa = feedAfter.data.doses.filter((d) => /via WhatsApp/.test(d.byName));
+    const okWa = activeCount === 2 && viaWa.length === test.data.message.doses.length && viaWa.every((d) => d.status === 'TAKEN');
+    if (!okWa) failures += 1;
+    console.log(`${okWa ? '✓' : '✗'} WhatsApp "1" logged ${viaWa.length}/${test.data.message.doses.length} doses as taken (${[...new Set(viaWa.map((d) => d.byName))].join(', ')})`);
+  } else console.log(`  (no pending doses left today: ${test.message})`);
+  // ABHA: identifiers + ABDM FHIR bundle import (preview → import → re-import is all duplicates).
+  await call('PATCH', `/members/${papaId}`, { abha: { number: '91 1234 5678 9012', address: 'rajesh.sharma' } });
+  await call('PATCH', `/members/${papaId}`, { abha: { number: '1234' } }, { expect: [400] });
+  const bundle = await call('GET', `/abha/${papaId}/sample`);
+  const bundleForm = () => { const f = new FormData(); f.append('file', new Blob([JSON.stringify(bundle)], { type: 'application/json' }), 'record.json'); return f; };
+  const pv = (await call('POST', `/abha/${papaId}/preview`, null, { form: bundleForm() })).data.preview;
+  console.log(`  abha preview: ${pv.source.kind} from ${pv.source.facility}; vitals ${pv.vitals.map((v) => `${v.type}=${v.value}${v.value2 ? `/${v.value2}` : ''}`).join(', ')}; docs ${pv.documents.length}; warnings ${pv.warnings.length}`);
+  const imp = (await call('POST', `/abha/${papaId}/import`, null, { form: bundleForm() })).data.result;
+  console.log(`  abha import: ${JSON.stringify(imp)}`);
+  const pv2 = (await call('POST', `/abha/${papaId}/preview`, null, { form: bundleForm() })).data.preview;
+  const allDup = [...pv2.vitals, ...pv2.conditions, ...pv2.immunizations, ...pv2.documents].every((x) => x.duplicate);
+  if (!allDup) failures += 1;
+  console.log(`${allDup ? '✓' : '✗'} re-importing the same ABDM record is detected as duplicate`);
+
+  const conv = await call('GET', `/whatsapp/${papaId}/messages`);
+  console.log(`  conversation: ${conv.data.items.map((m) => `${m.direction}:${m.kind}`).join(' → ')}`);
+
   await call('DELETE', '/auth/me', { confirm: 'DELETE' });
   await call('GET', '/auth/me', null, { expect: [401] });
 } catch (err) {

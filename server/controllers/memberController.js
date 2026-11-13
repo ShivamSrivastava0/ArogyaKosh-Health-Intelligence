@@ -18,11 +18,23 @@ import { generate, isAiEnabled, SAFETY_RULES } from '../services/aiService.js';
 import { generateSchedule } from '../services/vaccineService.js';
 import { removeUpload } from '../middleware/upload.js';
 import { logActivity } from '../services/circleService.js';
+import { admissionKit, admissionPdf } from '../services/admissionService.js';
+import { normalizeAbhaNumber, normalizeAbhaAddress } from '../services/abhaService.js';
+
+/** Validate + format ABHA identifiers before they reach the model. */
+const cleanAbha = (data) => {
+  if (!data.abha) return;
+  const number = normalizeAbhaNumber(data.abha.number);
+  const address = normalizeAbhaAddress(data.abha.address);
+  if (number === null) throw ApiError.badRequest('ABHA number must be 14 digits, like 91-1234-5678-9012');
+  if (address === null) throw ApiError.badRequest('ABHA address should look like name@abdm');
+  data.abha = { number, address };
+};
 
 const FIELDS = [
-  'name', 'relation', 'dob', 'gender', 'bloodGroup', 'heightCm', 'weightKg', 'waistCm', 'phone',
+  'name', 'relation', 'lineage', 'dob', 'gender', 'bloodGroup', 'heightCm', 'weightKg', 'waistCm', 'phone',
   'allergies', 'noKnownAllergies', 'conditions', 'emergencyContacts', 'doctor', 'insurance',
-  'lifestyle', 'organDonor', 'notes', 'color', 'emergencyEnabled',
+  'lifestyle', 'organDonor', 'idProof', 'address', 'occupation', 'abha', 'notes', 'color', 'emergencyEnabled',
 ];
 
 export const listMembers = asyncHandler(async (req, res) => {
@@ -47,6 +59,7 @@ export const getMember = asyncHandler(async (req, res) => {
 
 export const createMember = asyncHandler(async (req, res) => {
   const data = pick(req.body, FIELDS);
+  cleanAbha(data);
   if (data.relation === 'SELF') throw ApiError.badRequest('You are already in the family as "Self"');
   const count = await Member.countDocuments({ owner: req.ownerId });
   if (count >= 20) throw ApiError.badRequest('A household can have up to 20 members');
@@ -62,6 +75,7 @@ export const createMember = asyncHandler(async (req, res) => {
 export const updateMember = asyncHandler(async (req, res) => {
   const member = await getOwnedMember(req.ownerId, req.params.id);
   const data = pick(req.body, FIELDS);
+  cleanAbha(data);
   if (member.isSelf) delete data.relation;
   else if (data.relation === 'SELF') throw ApiError.badRequest('Only one member can be "Self"');
   if (data.lifestyle) data.lifestyle = { ...member.lifestyle?.toObject?.(), ...data.lifestyle };
@@ -119,4 +133,22 @@ export const rotateEmergencyToken = asyncHandler(async (req, res) => {
   member.emergencyToken = undefined;
   await member.save();
   return ApiResponse.success(res, 'New emergency link created. Old QR codes no longer work.', { member });
+});
+
+/** What the hospital insurance desk needs, and what is still missing. */
+export const admissionKitInfo = asyncHandler(async (req, res) => {
+  const kit = await admissionKit(req.ownerId, req.params.id);
+  return ApiResponse.success(res, 'Admission kit', { kit });
+});
+
+/** One merged PDF: patient + insurance cover sheet, medical summary, then the chosen documents. */
+export const admissionKitPdf = asyncHandler(async (req, res) => {
+  const ids = String(req.query.records || '').split(',').filter((s) => /^[a-f0-9]{24}$/i.test(s)).slice(0, 20);
+  const { bytes, filename, skipped } = await admissionPdf(req.ownerId, req.params.id, ids);
+  await logActivity(req, { type: 'ADMISSION_KIT', member: req.params.id, link: `/app/admission/${req.params.id}`, text: `${req.user.name} prepared a hospital admission kit` }).catch(() => {});
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  if (skipped.length) res.setHeader('X-Skipped-Documents', String(skipped.length));
+  res.setHeader('Cache-Control', 'no-store');
+  return res.send(bytes);
 });

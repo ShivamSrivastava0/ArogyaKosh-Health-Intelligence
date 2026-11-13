@@ -20,6 +20,9 @@ import * as share from '../controllers/shareController.js';
 import * as pub from '../controllers/publicController.js';
 import * as predict from '../controllers/predictController.js';
 import * as circle from '../controllers/circleController.js';
+import * as tree from '../controllers/familyTreeController.js';
+import * as wa from '../controllers/whatsappController.js';
+import * as abha from '../controllers/abhaController.js';
 import { resolveHousehold, requireWrite, ownerOnly } from '../middleware/household.js';
 
 const router = Router();
@@ -38,6 +41,10 @@ publicRouter.get('/share/:token/records/:recordId/file', pub.sharedFile);
 publicRouter.get('/calendar/:token', pub.calendar);
 publicRouter.get('/invites/:token', circle.preview);
 router.use('/public', publicRouter);
+
+// ---- Webhooks (signed by the provider) ---------------------------------------
+router.get('/webhooks/whatsapp', wa.verifyWebhook);
+router.post('/webhooks/whatsapp', limiter(3000), wa.receiveWebhook);
 
 // ---- Auth --------------------------------------------------------------------
 const a = Router();
@@ -93,6 +100,20 @@ router.post('/assistant', limiter(60), insights.assistant);
 router.get('/kit', insights.kit);
 router.put('/kit', insights.updateKit);
 
+router.get('/whatsapp', wa.status);
+router.put('/whatsapp/:memberId', requireWrite, wa.setup);
+router.get('/whatsapp/:memberId/messages', wa.messages);
+router.post('/whatsapp/:memberId/test', requireWrite, limiter(30), wa.testReminder);
+router.post('/whatsapp/:memberId/simulate', requireWrite, limiter(120), wa.simulate);
+router.get('/abha/:memberId/sample', abha.sample);
+router.post('/abha/:memberId/preview', limiter(60), abha.bundleUpload, abha.preview);
+router.post('/abha/:memberId/import', limiter(30), abha.bundleUpload, abha.importRecords);
+router.get('/family-tree', tree.tree);
+router.post('/family-tree/relatives', tree.createRelative);
+router.patch('/family-tree/relatives/:id', tree.updateRelative);
+router.delete('/family-tree/relatives/:id', tree.deleteRelative);
+router.post('/family-tree/plan/:memberId/schedule', tree.schedule);
+
 router.get('/members', members.listMembers);
 router.post('/members', members.createMember);
 router.get('/members/:id', members.getMember);
@@ -101,6 +122,8 @@ router.delete('/members/:id', ownerOnly, members.deleteMember);
 router.get('/members/:id/score', members.memberScore);
 router.get('/members/:id/brief', members.memberBrief);
 router.post('/members/:id/emergency-token', ownerOnly, members.rotateEmergencyToken);
+router.get('/members/:id/admission-kit', members.admissionKitInfo);
+router.get('/members/:id/admission-kit/pdf', members.admissionKitPdf);
 
 router.get('/medicines', meds.listMedicines);
 router.post('/medicines', meds.createMedicine);

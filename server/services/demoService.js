@@ -9,6 +9,7 @@ import Reminder from '../models/Reminder.js';
 import Vaccination from '../models/Vaccination.js';
 import Expense from '../models/Expense.js';
 import { CircleMember, CircleInvite, Activity, Notification } from '../models/Circle.js';
+import Relative from '../models/Relative.js';
 import { generateSchedule } from './vaccineService.js';
 import { isScheduledOn } from './medicineService.js';
 import { addDays, toDateKey } from '../utils/helpers.js';
@@ -79,17 +80,20 @@ export const createDemoAccount = async () => {
       emergencyContacts: [{ name: 'Aarav Sharma', relation: 'Husband', phone: '+91 98200 11223' }],
     },
     {
-      owner, name: 'Rajesh Sharma', relation: 'FATHER', dob: yearsAgo(66, 200), gender: 'MALE', bloodGroup: 'B+', heightCm: 170, weightKg: 81, waistCm: 101, color: 'sky',
+      owner, name: 'Rajesh Sharma', relation: 'FATHER', dob: yearsAgo(66, 200), gender: 'MALE', bloodGroup: 'B+', heightCm: 170, weightKg: 81, waistCm: 101, phone: '+91 98200 33114', color: 'sky',
+      whatsapp: { phone: '919820033114', status: 'ACTIVE', lang: 'hi', optedInAt: addDays(new Date(), -20) },
       noKnownAllergies: true,
       conditions: [{ name: 'Type 2 diabetes', since: yearsAgo(9), status: 'MANAGED' }, { name: 'Hypertension', since: yearsAgo(6), status: 'ACTIVE' }],
       lifestyle: { smoking: 'FORMER', alcohol: 'NEVER', activity: 'LIGHT', diet: 'VEGETARIAN', sleepHours: 6 },
       doctor: { name: 'Dr. Suresh Menon', specialty: 'Cardiologist', phone: '+91 20 6645 1200', clinic: 'Jehangir Hospital' },
-      insurance: [{ provider: 'Star Health Senior Citizens Red Carpet', policyNumber: 'SH-88213410', sumInsured: 500000, validTill: ahead(18), helpline: '1800 425 2255' }],
+      insurance: [{ provider: 'Star Health Senior Citizens Red Carpet', policyNumber: 'SH-88213410', cardId: 'SH-88213410-01', policyHolder: 'Rajesh Sharma', sumInsured: 500000, validTill: ahead(18), helpline: '1800 425 2255' }],
+      address: '14 Shanti Kunj, Baner Road, Pune 411045', occupation: 'Retired (bank officer)', idProof: { type: 'AADHAAR', last4: '4821' },
       emergencyContacts: [{ name: 'Aarav Sharma', relation: 'Son', phone: '+91 98200 11223' }, { name: 'Sunita Sharma', relation: 'Wife', phone: '+91 98200 77881' }],
       notes: 'Uses a walking stick on stairs. Prefers Hindi.',
     },
     {
       owner, name: 'Sunita Sharma', relation: 'MOTHER', dob: yearsAgo(61, 30), gender: 'FEMALE', bloodGroup: 'A+', heightCm: 155, weightKg: 64, waistCm: 86, color: 'lilac',
+      whatsapp: { phone: '919820033114', status: 'ACTIVE', lang: 'hi', optedInAt: addDays(new Date(), -20) }, // shares Papa's phone
       allergies: [{ name: 'Sulfa drugs', severity: 'MODERATE', reaction: 'Skin rash' }],
       conditions: [{ name: 'Hypothyroidism', since: yearsAgo(12), status: 'MANAGED' }],
       lifestyle: { smoking: 'NEVER', alcohol: 'NEVER', activity: 'MODERATE', diet: 'VEGETARIAN', sleepHours: 7.5 },
@@ -242,6 +246,16 @@ export const createDemoAccount = async () => {
   await Expense.insertMany(expenses.map(([category, amount, d, vendor, member, paymentMode, taxDeductible]) => ({
     owner, category, amount, date: ago(d), vendor, member, paymentMode, taxDeductible,
   })));
+
+  // Extended family for the Family Health Tree (people who aren't app members).
+  await Relative.create([
+    { owner, name: 'Ramprasad Sharma', position: 'P_GF', sex: 'MALE', deceased: true, ageAtDeath: 74, conditions: [{ name: 'Type 2 diabetes', ageAtOnset: 55 }, { name: 'Heart attack', ageAtOnset: 70 }] },
+    { owner, name: 'Kamla Sharma', position: 'P_GM', sex: 'FEMALE', conditions: [{ name: 'Hypertension', ageAtOnset: 58 }] },
+    { owner, name: 'Shanti Verma', position: 'M_GM', sex: 'FEMALE', conditions: [{ name: 'Diabetes', ageAtOnset: 60 }, { name: 'Glaucoma', ageAtOnset: 66 }] },
+    { owner, name: 'Asha Iyer', position: 'MOTHER_IN_LAW', sex: 'FEMALE', conditions: [{ name: 'Breast cancer', ageAtOnset: 46 }] },
+    { owner, name: 'Vinod Iyer', position: 'FATHER_IN_LAW', sex: 'MALE', conditions: [{ name: 'Hypertension', ageAtOnset: 50 }] },
+  ]);
+  await Member.updateOne({ _id: father._id }, { $set: { 'conditions.0.since': yearsAgo(9) } });
 
   // A week of shared activity so the circle timeline tells a story.
   const act = (daysAgo, h, m, actorDoc, type, member, text, link = '') => ({

@@ -121,7 +121,7 @@ function RiskScale({ risk }) {
   );
 }
 
-const SRC = { MANUAL: 'entered by you', REPORT_AI: 'read from a report, confirmed by you', REPORT_MANUAL: 'from a report' };
+const SRC = { MANUAL: 'entered by you', REPORT_AI: 'read from a report, confirmed by you', REPORT_MANUAL: 'from a report', ABDM: 'from a hospital record via ABHA' };
 
 /** Exactly which data produced the number — so the user can check it themselves. */
 function Evidence({ c }) {

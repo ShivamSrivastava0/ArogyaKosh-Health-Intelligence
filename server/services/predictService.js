@@ -1,6 +1,8 @@
 import Member from '../models/Member.js';
 import Medicine from '../models/Medicine.js';
 import Vital from '../models/Vital.js';
+import Relative from '../models/Relative.js';
+import { buildNodes, bloodRelatives } from './familyTreeService.js';
 import { VITALS, classifyVital } from '../data/vitals.js';
 import { ingredientsOf } from './safetyService.js';
 import { memberLite } from './memberService.js';
@@ -29,7 +31,7 @@ const ageLabel = (a) => (a >= 80 ? '80+' : String(a));
 const round1 = (x) => Math.round(x * 10) / 10;
 
 /** Collect everything the models need for one member. */
-const gatherInputs = (member, readings, meds, household) => {
+const gatherInputs = (member, readings, meds, household, relatives = []) => {
   const byType = {};
   for (const r of readings) (byType[r.type] ||= []).push(r);
   Object.values(byType).forEach((list) => list.sort((a, b) => b.at - a.at));
@@ -49,10 +51,11 @@ const gatherInputs = (member, readings, meds, household) => {
   const weight = latestWeight || member.weightKg;
   const bmi = member.heightCm && weight ? round1(weight / (member.heightCm / 100) ** 2) : null;
 
-  // Household-aware family history for diabetes risk.
-  const parentRelations = ['SON', 'DAUGHTER'].includes(member.relation) ? ['SELF', 'SPOUSE']
-    : member.isSelf ? ['FATHER', 'MOTHER'] : member.relation === 'SPOUSE' ? ['FATHER_IN_LAW', 'MOTHER_IN_LAW'] : [];
-  const parents = household.filter((h) => String(h._id) !== String(member._id) && parentRelations.includes(h.relation));
+  // Family history for diabetes risk comes from the Family Health Tree graph:
+  // household members AND relatives who aren't in the app.
+  const nodes = buildNodes(household, relatives);
+  const self = nodes.find((n) => n.memberId === String(member._id));
+  const parents = self ? bloodRelatives(self, nodes).first.filter((n) => ['father', 'mother', 'parent'].includes(n.rel)) : [];
   const parentDiabetic = parents.filter((p) => p.conditions.some((c) => /diabet/i.test(c.name))).length;
 
   // Provenance for every model input: what value, from when, how many readings.
@@ -282,7 +285,8 @@ export const predictMember = async (member, { household } = {}) => {
     Medicine.find({ member: member._id, active: true }),
     household ? Promise.resolve(household) : Member.find({ owner: ownerId }),
   ]);
-  const inp = gatherInputs(member, readings, meds, family);
+  const relatives = await Relative.find({ owner: member.owner });
+  const inp = gatherInputs(member, readings, meds, family, relatives);
   const cardio = cardioModel(member, inp);
   const g = egfr({ creatinine: inp.creatinine, age: member.age, sex: member.gender === 'OTHER' ? null : member.gender });
   const stage = ckdStage(g);

@@ -168,3 +168,27 @@ test('flags warfarin + NSAID, paracetamol duplicates, and penicillin allergy', (
   // Ibuprofen blunts low-dose aspirin (FDA 2006 science paper)
   assert.ok(checkMedicines([{ name: 'Ecosprin 75' }, { name: 'Brufen 400' }], []).some((x) => x.kind === 'INTERACTION'));
 });
+
+/* ---- WhatsApp ---- */
+import crypto from 'crypto';
+import { normalizePhone, verifySignature } from '../services/whatsappService.js';
+import { env as appEnv } from '../config/env.js';
+
+test('WhatsApp: phone numbers normalise to wa_id format', () => {
+  assert.equal(normalizePhone('98200 33114'), '919820033114');
+  assert.equal(normalizePhone('+91 98200-33114'), '919820033114');
+  assert.equal(normalizePhone('09820033114'), '919820033114');
+  assert.equal(normalizePhone('0044 7700 900123'), '447700900123');
+  assert.equal(normalizePhone('12345'), null);
+});
+
+test('WhatsApp: webhook signature must match the app secret', () => {
+  const prev = appEnv.whatsapp.appSecret;
+  appEnv.whatsapp.appSecret = 'test-secret';
+  const body = Buffer.from('{"entry":[]}');
+  const sig = `sha256=${crypto.createHmac('sha256', 'test-secret').update(body).digest('hex')}`;
+  assert.equal(verifySignature(body, sig), true);
+  assert.equal(verifySignature(Buffer.from('{"entry":[1]}'), sig), false);
+  assert.equal(verifySignature(body, 'sha256=00'), false);
+  appEnv.whatsapp.appSecret = prev;
+});

@@ -4,7 +4,7 @@ import { VITAL_TYPES, VITALS, classifyVital, validateReading } from '../data/vit
 const { Schema } = mongoose;
 
 /** Where a reading came from — shown next to it so users know what to trust. */
-export const VITAL_SOURCES = ['MANUAL', 'REPORT_AI', 'REPORT_MANUAL'];
+export const VITAL_SOURCES = ['MANUAL', 'REPORT_AI', 'REPORT_MANUAL', 'ABDM'];
 
 const vitalSchema = new Schema(
   {

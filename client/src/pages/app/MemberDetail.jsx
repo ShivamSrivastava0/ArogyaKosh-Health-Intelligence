@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import {
   LuPencil, LuClipboardList, LuQrCode, LuTrash2, LuPhone, LuShieldCheck, LuStethoscope, LuTriangleAlert, LuHeartPulse,
   LuPlus, LuChevronRight, LuInfo, LuBrainCircuit,
+  LuHospital,
 } from 'react-icons/lu';
 import InsightList from '../../components/predict/Insights';
 import { useApi, invalidate } from '../../hooks/useApi';
@@ -250,6 +251,7 @@ export default function MemberDetail() {
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" icon={LuQrCode} to={`/app/emergency?member=${member._id}`}>Emergency card</Button>
           <Button variant="secondary" icon={LuBrainCircuit} to={`/app/predict?member=${member._id}`}>Predictions</Button>
+          <Button variant="secondary" icon={LuHospital} to={`/app/admission/${member._id}`}>Admission kit</Button>
           <Button icon={LuClipboardList} to={`/app/family/${member._id}/brief`}>Doctor brief</Button>
           <ActionMenu items={[
             { label: 'Edit profile', icon: LuPencil, onClick: () => quick.open('member', { memberDoc: member, section: 'basics' }) },

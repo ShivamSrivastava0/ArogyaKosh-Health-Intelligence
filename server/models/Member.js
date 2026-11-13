@@ -19,6 +19,8 @@ const memberSchema = new Schema(
     isSelf: { type: Boolean, default: false },
     name: { type: String, required: [true, 'Name is required'], trim: true, minlength: 1, maxlength: 60 },
     relation: { type: String, enum: RELATIONS, required: true, default: 'OTHER' },
+    // For grandparents: which side of the family (used by the Family Health Tree).
+    lineage: { type: String, enum: ['PATERNAL', 'MATERNAL', ''], default: '' },
     dob: { type: Date, default: null },
     gender: opt(GENDERS),
     bloodGroup: opt(BLOOD_GROUPS),
@@ -43,7 +45,31 @@ const memberSchema = new Schema(
       sumInsured: { type: Number, default: null },
       validTill: { type: Date, default: null },
       helpline: { type: String, trim: true, default: '' },
+      // What the hospital's insurance desk asks for at admission.
+      tpa: { type: String, trim: true, default: '' },
+      cardId: { type: String, trim: true, default: '' }, // insured / member ID on the e-card
+      policyHolder: { type: String, trim: true, default: '' },
+      employeeId: { type: String, trim: true, default: '' }, // corporate group policies
     }],
+    // ID proof for cashless admission. Only the type and last 4 digits are stored, never the full number.
+    idProof: {
+      type: { type: String, enum: ['AADHAAR', 'PAN', 'PASSPORT', 'VOTER_ID', 'DRIVING_LICENCE', ''], default: '' },
+      last4: { type: String, trim: true, match: [/^[A-Za-z0-9]{0,4}$/, 'Only the last 4 characters'], default: '' },
+    },
+    address: { type: String, trim: true, maxlength: 300, default: '' },
+    // Ayushman Bharat Health Account: 14-digit number (XX-XXXX-XXXX-XXXX) and/or address (name@abdm).
+    abha: {
+      number: { type: String, trim: true, match: [/^(\d{2}-\d{4}-\d{4}-\d{4})?$/, 'ABHA number must be 14 digits'], default: '' },
+      address: { type: String, trim: true, lowercase: true, match: [/^([a-z0-9._]+@(abdm|sbx))?$/, 'ABHA address looks like name@abdm'], default: '' },
+    },
+    // WhatsApp dose reminders. ACTIVE only after the person replies YES (their consent).
+    whatsapp: {
+      phone: { type: String, trim: true, default: '' }, // digits with country code, e.g. 919820033114
+      status: { type: String, enum: ['OFF', 'PENDING', 'ACTIVE', 'STOPPED'], default: 'OFF' },
+      lang: { type: String, enum: ['en', 'hi'], default: 'hi' },
+      optedInAt: { type: Date, default: null },
+    },
+    occupation: { type: String, trim: true, maxlength: 80, default: '' },
     lifestyle: {
       smoking: opt(LIFESTYLE.smoking),
       alcohol: opt(LIFESTYLE.alcohol),
